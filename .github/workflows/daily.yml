@@ -66,7 +66,7 @@ jobs:
         run: |
           git config user.name "market-read-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add history.csv index.html
+          git add history.csv index.html stamp.txt
           git commit -m "Market read $(date '+%Y-%m-%d %H:%M %Z')" || echo "No changes"
           # If another run saved first, put this run's report on top of it and retry.
           for i in 1 2 3; do
@@ -80,7 +80,7 @@ jobs:
 
       - name: Package site
         if: steps.gate.outputs.run == 'true'
-        run: mkdir -p _site && cp index.html history.csv _site/
+        run: mkdir -p _site && cp index.html history.csv stamp.txt _site/
 
       - uses: actions/upload-pages-artifact@v3
         if: steps.gate.outputs.run == 'true'
@@ -90,4 +90,13 @@ jobs:
       - name: Publish to phone URL
         id: deploy
         if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      # GitHub's publish step sometimes fails for a moment; wait and try once more.
+      - name: Retry publish
+        if: steps.gate.outputs.run == 'true' && steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - name: Publish to phone URL (retry)
+        if: steps.gate.outputs.run == 'true' && steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4

@@ -28,6 +28,27 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+STAMP = datetime.now().strftime('%Y%m%d%H%M%S')  # build id, checked by the page
+FRESH_JS = '''<script>
+/* Phones keep an old copy of this page. On every open, check stamp.txt (never cached)
+   and reload if a newer report has been published. */
+(function () {
+  var S = "__STAMP__";
+  function chk() {
+    fetch("stamp.txt?t=" + Date.now(), {cache: "no-store"})
+      .then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (t) {
+        t = t.trim();
+        if (t && t !== S && location.search.indexOf("v=" + t) < 0)
+          location.replace(location.pathname + "?v=" + encodeURIComponent(t));
+      }).catch(function () {});
+  }
+  chk();
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") chk(); });
+  window.addEventListener("pageshow", function (e) { if (e.persisted) chk(); });
+})();
+</script>'''.replace('__STAMP__', STAMP)
+
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -770,7 +791,7 @@ Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
-</main></body></html>"""
+</main>{FRESH_JS}</body></html>"""
 
 
 def main():
@@ -789,6 +810,8 @@ def main():
     history = append_history(vix, br, hy, dx, rt, pr, checks)
     with open(REPORT, "w") as f:
         f.write(render(vix, br, hy, dx, rt, pr, checks, history))
+    with open(os.path.join(HERE, "stamp.txt"), "w") as f:
+        f.write(STAMP)
 
     d1 = vix["d1"]
     print(f"\nVIX  {vix['last']:.2f} ({d1[0]:+.2f}, {d1[1]:+.1f}%)  -> {vix['alert'][0]}")
