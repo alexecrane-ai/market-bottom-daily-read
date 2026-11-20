@@ -1,0 +1,2 @@
+run_date,vix_date,vix,vix_chg_1d,vix_chg_1d_pct,vix_drop_from_10d_high_pct,vix_fast_drop_below_25,breadth_date,pct_stocks_up,pct_stocks_down,pct_up_volume,ninety_pct_up_day,ninety_pct_down_day,hy_date,hy_oas_bps,hy_chg_1d_bps,hy_chg_20d_bps,hy_vol_pctile,hy_status
+2026-11-19,2026-11-19,28.44,3.88,15.8,0.0,False,2026-11-19,7.6,92.2,11.0,False,True,2026-11-18,347,4,20,99,VOLATILE

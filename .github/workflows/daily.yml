@@ -1,0 +1,86 @@
+name: Market Bottom Daily Read
+
+on:
+  schedule:
+    # 10:00am and 3:00pm New York time, Mon–Fri.
+    # Cron is UTC, so list both the winter (EST) and summer (EDT) hours;
+    # the "gate" step below keeps only the one that matches New York time.
+    - cron: "5 14 * * 1-5"   # 10am EST
+    - cron: "5 15 * * 1-5"   # 10am EDT
+    - cron: "5 19 * * 1-5"   # 3pm EST
+    - cron: "5 20 * * 1-5"   # 3pm EDT
+  workflow_dispatch:          # "Run workflow" button (works from the GitHub mobile app)
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: market-read
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      TZ: America/New_York
+    steps:
+      - name: Gate on New York time
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # Which UTC hour was this cron for, and is New York on EST or EDT today?
+          cron_hour=$(echo "${{ github.event.schedule }}" | awk '{print $2}')
+          if [ "$(date +%z)" = "-0500" ]; then wanted="14 19"; else wanted="15 20"; fi
+          if echo " $wanted " | grep -q " $cron_hour "; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping: cron hour $cron_hour UTC isn't 10am/3pm New York today."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Run tracker
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          pip install --quiet pandas
+          python market_tracker.py
+
+      - name: Save daily log
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git config user.name "market-read-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history.csv index.html
+          git commit -m "Market read $(date '+%Y-%m-%d %H:%M %Z')" || echo "No changes"
+          git push
+
+      - uses: actions/configure-pages@v5
+        if: steps.gate.outputs.run == 'true'
+
+      - name: Package site
+        if: steps.gate.outputs.run == 'true'
+        run: mkdir -p _site && cp index.html history.csv _site/
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.gate.outputs.run == 'true'
+        with:
+          path: _site
+
+      - name: Publish to phone URL
+        id: deploy
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/deploy-pages@v4

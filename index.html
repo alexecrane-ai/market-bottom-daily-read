@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Bottom Daily Read</title>
+<meta name="apple-mobile-web-app-title" content="Market Read">
+<style>
+:root { --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#667085; --line:#e4e7ec;
+  --good:#0f8a5f; --good-bg:#e3f6ee; --bad:#c2352b; --bad-bg:#fbe9e7;
+  --neu:#475467; --neu-bg:#eef1f5; --accent:#3559e0; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#181b21; --ink:#e8eaee;
+  --muted:#98a2b3; --line:#2a2f38; --good:#3ecf8e; --good-bg:#12302a; --bad:#ff6b5e;
+  --bad-bg:#3a1a18; --neu:#c0c7d2; --neu-bg:#232832; --accent:#7c9bff; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width:1180px; margin:0 auto; padding:28px 16px 48px }
+h1 { margin:0 0 4px; font-size:26px } .sub { color:var(--muted); margin:0 0 24px }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(330px, 1fr)); gap:16px }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px }
+.card h2 { margin:0; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted) }
+.big { font-size:44px; font-weight:700; letter-spacing:-.02em; margin:6px 0 2px; font-variant-numeric:tabular-nums }
+.big small { font-size:16px; font-weight:500; color:var(--muted); margin-left:6px }
+.badge { display:inline-block; font-weight:700; font-size:13px; padding:5px 10px; border-radius:999px; margin-top:8px }
+.badge.good { color:var(--good); background:var(--good-bg) } .badge.bad { color:var(--bad); background:var(--bad-bg) }
+.badge.neutral { color:var(--neu); background:var(--neu-bg) }
+.why { margin:8px 0 12px; color:var(--muted) }
+table.kv { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }
+table.kv td { padding:6px 0; border-top:1px solid var(--line) } table.kv td:last-child { text-align:right }
+.up { color:var(--bad) } .down { color:var(--good) }
+.breadth .up { color:var(--good) }
+.spark { width:100%; height:110px; margin-top:12px; display:block }
+.ln { fill:none; stroke:var(--accent); stroke-width:2; vector-effect:non-scaling-stroke }
+.dot { fill:var(--accent) } .ref { stroke:var(--muted); stroke-dasharray:4 4; vector-effect:non-scaling-stroke }
+.reflbl { fill:var(--muted); font-size:11px; text-anchor:end }
+.bar { fill:var(--line) } .bar.hit { fill:var(--good) } .bar.low { fill:var(--bad) }
+.cap { font-size:12px; color:var(--muted); margin-top:4px }
+.hist { margin-top:16px; overflow-x:auto }
+.hist table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums }
+.hist th, .hist td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap }
+.hist th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em }
+.sub a { color:var(--accent); font-weight:600; text-decoration:none }
+.notes { color:var(--muted); font-size:13px; margin-top:20px }
+</style></head><body><main>
+<h1>Market Bottom Daily Read</h1>
+<p class="sub">Updated Thu Nov 19, 2026 · 09:24 PM ET ·
+<a href="https://github.com/alexecrane-ai/market-bottom-daily-read/actions/workflows/daily.yml">Refresh now ↻</a></p>
+
+<div class="grid">
+  <section class="card">
+    <h2>VIX · volatility index</h2>
+    <div class="big">28.44<small>High · Nov 19</small></div>
+    <div class="badge bad">ABOVE 25</div><p class="why">VIX is 3.44 pts above 25.</p>
+    <table class="kv">
+      <tr><td>1-day move</td><td><span class="up">+3.88 pts</span> (<span class="up">+15.8%</span>)</td></tr>
+      <tr><td>5-day move</td><td><span class="up">+9.74 pts</span> (<span class="up">+52.1%</span>)</td></tr>
+      <tr><td>20-day move</td><td><span class="up">+9.41 pts</span> (<span class="up">+49.4%</span>)</td></tr>
+      <tr><td>10-day high</td><td>28.44 (Nov 19)</td></tr>
+      <tr><td>Change from that high</td><td><span class="">+0.0%</span></td></tr>
+      <tr><td>Last cross below 25</td><td>Nov 18, 2026</td></tr>
+    </table>
+    <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><line x1="0" x2="560" y1="35.1" y2="35.1" class="ref"/><text x="556" y="31.1" class="reflbl">25</text><polyline points="4.0,95.7 8.6,100.2 13.3,58.7 17.9,76.3 22.6,69.9 27.2,53.9 31.8,72.8 36.5,84.7 41.1,94.8 45.7,93.3 50.4,79.6 55.0,93.4 59.7,87.4 64.3,72.5 68.9,78.3 73.6,76.5 78.2,79.8 82.9,84.9 87.5,93.1 92.1,92.1 96.8,95.1 101.4,99.0 106.1,95.2 110.7,90.0 115.3,97.2 120.0,102.7 124.6,88.3 129.2,92.7 133.9,98.4 138.5,91.2 143.2,77.3 147.8,78.2 152.4,89.0 157.1,91.8 161.7,77.8 166.4,78.6 171.0,78.0 175.6,81.1 180.3,64.5 184.9,88.7 189.5,96.2 194.2,97.1 198.8,92.7 203.5,97.4 208.1,101.9 212.7,103.6 217.4,99.8 222.0,101.0 226.7,106.0 231.3,105.4 235.9,108.0 240.6,101.6 245.2,97.2 249.8,103.7 254.5,96.1 259.1,102.0 263.8,97.1 268.4,99.9 273.0,101.5 277.7,106.2 282.3,106.8 287.0,103.5 291.6,93.8 296.2,101.6 300.9,107.5 305.5,106.1 310.2,100.9 314.8,98.0 319.4,93.0 324.1,83.6 328.7,97.2 333.3,88.7 338.0,88.0 342.6,84.5 347.3,99.9 351.9,104.2 356.5,103.8 361.2,108.3 365.8,101.7 370.5,98.4 375.1,103.8 379.7,95.7 384.4,95.9 389.0,93.8 393.6,93.5 398.3,100.8 402.9,99.4 407.6,102.8 412.2,102.4 416.8,100.1 421.5,104.0 426.1,101.5 430.8,101.1 435.4,90.2 440.0,93.0 444.7,69.1 449.3,79.6 453.9,87.2 458.6,91.5 463.2,75.6 467.9,72.7 472.5,79.9 477.1,85.8 481.8,90.0 486.4,88.0 491.1,72.9 495.7,61.2 500.3,63.4 505.0,92.0 509.6,13.5 514.3,30.7 518.9,69.5 523.5,72.7 528.2,86.0 532.8,77.8 537.4,73.7 542.1,49.2 546.7,31.9 551.4,38.1 556.0,11.7" class="ln"/><circle cx="556.0" cy="11.7" r="3.5" class="dot"/></svg>
+    <div class="cap">Last 6 months · dashed line = 25</div>
+  </section>
+
+  <section class="card breadth">
+    <h2>Breadth · S&amp;P 500 stocks up</h2>
+    <div class="big">7.6%<small>of 503 stocks · Nov 19</small></div>
+    <div class="badge bad">90% DOWNSIDE DAY</div><p class="why">92.2% of S&P 500 stocks fell together.</p>
+    <table class="kv">
+      <tr><td>Stocks up</td><td><span class="up">7.6%</span></td></tr>
+      <tr><td>Stocks down</td><td>92.2%</td></tr>
+      <tr><td>Share of volume in rising stocks</td><td>11.0%</td></tr>
+      <tr><td>90% up days (last 60)</td><td>0 — none</td></tr>
+      <tr><td>90% down days (last 60)</td><td>1 — Nov 19</td></tr>
+    </table>
+    <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><line x1="0" x2="560" y1="15.2" y2="15.2" class="ref"/><text x="556" y="11.2" class="reflbl">90%</text><rect x="4.0" y="81.8" width="6.9" height="34.2" class="bar"/><rect x="13.2" y="65.7" width="6.9" height="50.3" class="bar"/><rect x="22.4" y="86.0" width="6.9" height="30.0" class="bar"/><rect x="31.6" y="80.7" width="6.9" height="35.3" class="bar"/><rect x="40.8" y="49.8" width="6.9" height="66.2" class="bar"/><rect x="50.0" y="39.8" width="6.9" height="76.2" class="bar"/><rect x="59.2" y="76.7" width="6.9" height="39.3" class="bar"/><rect x="68.4" y="82.9" width="6.9" height="33.1" class="bar"/><rect x="77.6" y="93.9" width="6.9" height="22.1" class="bar"/><rect x="86.8" y="79.1" width="6.9" height="36.9" class="bar"/><rect x="96.0" y="40.7" width="6.9" height="75.3" class="bar"/><rect x="105.2" y="53.0" width="6.9" height="63.0" class="bar"/><rect x="114.4" y="80.7" width="6.9" height="35.3" class="bar"/><rect x="123.6" y="80.0" width="6.9" height="36.0" class="bar"/><rect x="132.8" y="50.5" width="6.9" height="65.5" class="bar"/><rect x="142.0" y="81.3" width="6.9" height="34.7" class="bar"/><rect x="151.2" y="50.7" width="6.9" height="65.3" class="bar"/><rect x="160.4" y="60.8" width="6.9" height="55.2" class="bar"/><rect x="169.6" y="77.8" width="6.9" height="38.2" class="bar"/><rect x="178.8" y="76.4" width="6.9" height="39.6" class="bar"/><rect x="188.0" y="43.1" width="6.9" height="72.9" class="bar"/><rect x="197.2" y="79.3" width="6.9" height="36.7" class="bar"/><rect x="206.4" y="72.2" width="6.9" height="43.8" class="bar"/><rect x="215.6" y="90.5" width="6.9" height="25.5" class="bar"/><rect x="224.8" y="49.6" width="6.9" height="66.4" class="bar"/><rect x="234.0" y="50.6" width="6.9" height="65.4" class="bar"/><rect x="243.2" y="45.3" width="6.9" height="70.7" class="bar"/><rect x="252.4" y="40.6" width="6.9" height="75.4" class="bar"/><rect x="261.6" y="85.4" width="6.9" height="30.6" class="bar"/><rect x="270.8" y="40.4" width="6.9" height="75.6" class="bar"/><rect x="280.0" y="44.6" width="6.9" height="71.4" class="bar"/><rect x="289.2" y="44.6" width="6.9" height="71.4" class="bar"/><rect x="298.4" y="56.9" width="6.9" height="59.1" class="bar"/><rect x="307.6" y="62.5" width="6.9" height="53.5" class="bar"/><rect x="316.8" y="31.4" width="6.9" height="84.6" class="bar"/><rect x="326.0" y="60.7" width="6.9" height="55.3" class="bar"/><rect x="335.2" y="76.7" width="6.9" height="39.3" class="bar"/><rect x="344.4" y="25.9" width="6.9" height="90.1" class="bar"/><rect x="353.6" y="53.3" width="6.9" height="62.7" class="bar"/><rect x="362.8" y="41.3" width="6.9" height="74.7" class="bar"/><rect x="372.0" y="85.7" width="6.9" height="30.3" class="bar"/><rect x="381.2" y="51.5" width="6.9" height="64.5" class="bar"/><rect x="390.4" y="61.3" width="6.9" height="54.7" class="bar"/><rect x="399.6" y="61.1" width="6.9" height="54.9" class="bar"/><rect x="408.8" y="25.6" width="6.9" height="90.4" class="bar"/><rect x="418.0" y="65.6" width="6.9" height="50.4" class="bar"/><rect x="427.2" y="38.8" width="6.9" height="77.2" class="bar"/><rect x="436.4" y="73.8" width="6.9" height="42.2" class="bar"/><rect x="445.6" y="32.1" width="6.9" height="83.9" class="bar"/><rect x="454.8" y="99.7" width="6.9" height="16.3" class="bar"/><rect x="464.0" y="75.2" width="6.9" height="40.8" class="bar"/><rect x="473.2" y="21.8" width="6.9" height="94.2" class="bar"/><rect x="482.4" y="60.9" width="6.9" height="55.1" class="bar"/><rect x="491.6" y="42.2" width="6.9" height="73.8" class="bar"/><rect x="500.8" y="88.3" width="6.9" height="27.7" class="bar"/><rect x="510.0" y="45.7" width="6.9" height="70.3" class="bar"/><rect x="519.2" y="83.6" width="6.9" height="32.4" class="bar"/><rect x="528.4" y="99.3" width="6.9" height="16.7" class="bar"/><rect x="537.6" y="63.2" width="6.9" height="52.8" class="bar"/><rect x="546.8" y="107.5" width="6.9" height="8.5" class="bar low"/></svg>
+    <div class="cap">% of stocks up each day, last 60 sessions · green = 90%+ up, red = 90%+ down</div>
+  </section>
+
+  <section class="card">
+    <h2>Junk bond spreads · HY OAS</h2>
+    <div class="big">347<small>bps · Nov 18</small></div>
+    <div class="badge bad">VOLATILE</div><p class="why">Spreads are day-to-day swings in the top 1% of the past year.</p>
+    <table class="kv">
+      <tr><td>1-day change</td><td><span class="up">+4 bps</span></td></tr>
+      <tr><td>5-day change</td><td><span class="up">+17 bps</span></td></tr>
+      <tr><td>20-day change</td><td><span class="up">+20 bps</span></td></tr>
+      <tr><td>Typical daily swing (20d)</td><td>9.2 bps · 99th pctile (1y)</td></tr>
+      <tr><td>1-year range</td><td>260 – 348 bps</td></tr>
+    </table>
+    <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><polyline points="4.0,92.9 8.6,90.7 13.3,91.8 17.9,88.5 22.6,86.3 27.2,88.5 31.8,96.2 36.5,101.7 41.1,96.2 45.7,105.0 50.4,101.7 55.0,101.7 59.7,102.8 64.3,96.2 68.9,90.7 73.6,88.5 78.2,83.0 82.9,86.3 87.5,91.8 92.1,92.9 96.8,91.8 101.4,92.9 106.1,95.1 110.7,100.6 115.3,97.3 120.0,97.3 124.6,98.4 129.2,98.4 133.9,95.1 138.5,96.2 143.2,96.2 147.8,94.0 152.4,98.4 157.1,98.4 161.7,99.5 166.4,89.6 171.0,87.4 175.6,85.2 180.3,81.9 184.9,78.7 189.5,81.9 194.2,80.8 198.8,88.5 203.5,94.0 208.1,91.8 212.7,96.2 217.4,97.3 222.0,97.3 226.7,95.1 231.3,96.2 235.9,96.2 240.6,100.6 245.2,97.3 249.8,91.8 254.5,94.0 259.1,91.8 263.8,97.3 268.4,98.4 273.0,97.3 277.7,100.6 282.3,105.0 287.0,108.3 291.6,105.0 296.2,102.8 300.9,101.7 305.5,102.8 310.2,99.5 314.8,99.5 319.4,100.6 324.1,96.2 328.7,97.3 333.3,102.8 338.0,96.2 342.6,90.7 347.3,97.3 351.9,97.3 356.5,99.5 361.2,101.7 365.8,99.5 370.5,94.0 375.1,86.3 379.7,72.1 384.4,62.2 389.0,55.6 393.6,51.2 398.3,38.1 402.9,53.4 407.6,51.2 412.2,61.1 416.8,54.5 421.5,47.9 426.1,52.3 430.8,52.3 435.4,46.8 440.0,37.0 444.7,39.2 449.3,30.4 453.9,32.6 458.6,28.2 463.2,34.8 467.9,20.5 472.5,22.7 477.1,31.5 481.8,44.6 486.4,49.0 491.1,35.9 495.7,16.1 500.3,17.2 505.0,20.5 509.6,29.3 514.3,11.7 518.9,18.3 523.5,27.1 528.2,31.5 532.8,31.5 537.4,42.4 542.1,39.2 546.7,27.1 551.4,17.2 556.0,12.8" class="ln"/><circle cx="556.0" cy="12.8" r="3.5" class="dot"/></svg>
+    <div class="cap">Last ~6 months · rising line = spreads widening (more stress)</div>
+  </section>
+</div>
+
+<section class="card hist">
+  <h2>Daily log</h2>
+  <table><thead><tr><th>Date</th><th>VIX</th><th>VIX 1d</th><th>Fast drop &lt;25</th>
+  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th></tr></thead>
+  <tbody><tr><td>2026-11-19</td><td>28.44</td><td>3.88</td><td></td><td>7.6%</td><td>▼ 90%</td><td>347</td><td>VOLATILE</td></tr></tbody></table>
+</section>
+
+<p class="notes">
+<b>How signals are defined.</b>
+<b>Fast drop below 25:</b> VIX closes under 25, was at or above 25 within the last 10 sessions,
+and is down at least 20% from its 10-day high.
+<b>90% day:</b> at least 90% of S&amp;P 500 members closed up (or down) versus the prior close.
+This is a large-cap proxy; the classic Lowry study uses NYSE up-volume and points gained.
+<b>Junk spreads:</b> ICE BofA US High Yield option-adjusted spread from FRED (usually one business day behind).
+Volatile = 20-day swing size in the top 20% of the past year, or widening of 30+ bps in 5 days or 50+ bps in 20 days.
+Calm = swing size below the 50th percentile with little widening.
+In the VIX and spread tables, red means rising (more stress) and green means falling.
+Not investment advice.
+</p>
+</main></body></html>
