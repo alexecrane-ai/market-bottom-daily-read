@@ -5,6 +5,9 @@ Daily Market Tracker
 1. VIX      - level, daily/weekly/monthly moves, and a "FAST DROP BELOW 25" alert.
 2. Breadth  - % of S&P 500 stocks up on the day; flags 90% upside (and downside) days.
 3. Junk     - ICE BofA US High Yield OAS: is it CALM, NORMAL or VOLATILE?
+4. Dollar   - US Dollar Index: still making highs, or reversing?
+5. Rates    - 10y-2y yield curve (flattening = stress) and whether 10y yields are stabilizing.
+Plus a "bottom checklist" that counts how many signals point to a bottom.
 
 Writes:  report.html   (open in any browser)
          history.csv   (one row per trading day, appended each run)
@@ -41,6 +44,10 @@ HY_CALM_PCTILE = 50        # spread volatility below this 1y percentile = calm
 HY_VOLATILE_PCTILE = 80    # at/above this percentile = volatile
 HY_WIDEN_20D_BPS = 50      # spreads widening this much in 20 days = volatile
 HY_WIDEN_5D_BPS = 30       # ... or this much in 5 days = volatile
+DXY_REVERSAL_PCT = 1.5     # dollar this far off a recent 60-day high (and under 20d avg) = reversing
+CURVE_MOVE_BPS = 10        # 10y-2y change over 20 days that counts as flattening/steepening
+RATES_STABLE_BPS = 25      # 10y yield moving less than this over 20 days = stabilizing
+WASHOUT_PCT = 20           # under this % of stocks above their 50-day average = washed out
 
 
 # ---- Data fetching -----------------------------------------------------------
@@ -114,6 +121,22 @@ def analyze_vix():
         base = s.iloc[-1 - n]
         return last - base, (last / base - 1) * 100
 
+    def fast_drop_on(i):
+        w = s.iloc[max(0, i - VIX_LOOKBACK):i + 1]
+        v = s.iloc[i]
+        return (v < VIX_LINE and (w.iloc[:-1] >= VIX_LINE).any()
+                and (1 - v / w.max()) * 100 >= VIX_FAST_DROP_PCT)
+    recent_fast_drops = [s.index[i] for i in range(len(s) - 10, len(s)) if fast_drop_on(i)]
+
+    # Term structure: VIX vs 3-month VIX. Above 1.0 (backwardation) = panic.
+    try:
+        v3 = yahoo_daily("^VIX3M", "1y")["close"]
+        ratio = (s / v3).dropna()
+        ts_ratio = ratio.iloc[-1]
+        ts_recent_max = ratio.iloc[-20:].max()
+    except Exception:
+        ts_ratio = ts_recent_max = None
+
     window = s.iloc[-(VIX_LOOKBACK + 1):]
     recent_high = window.max()
     recent_high_date = window.idxmax()
@@ -157,6 +180,8 @@ def analyze_vix():
         "drop_from_high": drop_from_high, "fast_drop": fast_drop,
         "crossed_today": crossed_today, "cross_date": cross_date,
         "alert": alert, "series": s.iloc[-120:],
+        "recent_fast_drops": recent_fast_drops,
+        "ts_ratio": ts_ratio, "ts_recent_max": ts_recent_max,
     }
 
 
@@ -193,6 +218,11 @@ def analyze_breadth():
     # Keep only days where most of the index reported (drops partial/holiday rows)
     daily = daily[daily["n"] >= got * 0.9].dropna()
 
+    ma50 = closes.rolling(50, min_periods=50).mean()
+    has_ma = ma50.notna() & closes.notna()
+    pct_above = ((closes > ma50) & has_ma).sum(axis=1) / has_ma.sum(axis=1) * 100
+    pct_above = pct_above.reindex(daily.index)
+
     t = daily.iloc[-1]
     is_up90 = t.pct_up >= BREADTH_THRUST
     is_down90 = t.pct_down >= BREADTH_THRUST
@@ -216,6 +246,10 @@ def analyze_breadth():
         "is_up90": is_up90, "is_down90": is_down90, "alert": alert,
         "up90_days": up90_days, "down90_days": down90_days,
         "series": recent["pct_up"],
+        "pct_above50": pct_above.iloc[-1],
+        "above50_min20": pct_above.iloc[-20:].min(),
+        "above50_series": pct_above.iloc[-60:].dropna(),
+        "up90_last10": bool((daily["pct_up"].iloc[-10:] >= BREADTH_THRUST).any()),
     }
 
 
@@ -261,8 +295,96 @@ def analyze_hy():
     }
 
 
+# ---- 4. US dollar -------------------------------------------------------------
+def analyze_dollar():
+    s = yahoo_daily("DX-Y.NYB", "1y")["close"]
+    last = s.iloc[-1]
+    pct = lambda n: (last / s.iloc[-1 - n] - 1) * 100
+    ma20, ma50 = s.iloc[-20:].mean(), s.iloc[-50:].mean()
+    w60 = s.iloc[-60:]
+    hi60, hi_date = w60.max(), w60.idxmax()
+    off_high = (last / hi60 - 1) * 100
+    high_recent = hi_date >= s.index[-20]
+
+    if high_recent and last < ma20 and off_high <= -DXY_REVERSAL_PCT:
+        status = ("REVERSING", "good",
+                  f"Down {abs(off_high):.1f}% from its {hi_date:%b %d} high and back under its 20-day average.")
+    elif last < ma50:
+        status = ("FALLING", "good", "Below its 50-day average, so pressure on stocks is easing.")
+    elif off_high > -0.5:
+        status = ("AT HIGHS", "bad", "Strong dollar at or near a 60-day high, still a headwind.")
+    else:
+        status = ("FIRM", "neutral", "Above its 50-day average but off its highs.")
+
+    return {"date": s.index[-1], "last": last, "c1": pct(1), "c5": pct(5), "c20": pct(20),
+            "ma50": ma50, "hi60": hi60, "hi_date": hi_date, "off_high": off_high,
+            "alert": status, "ok": status[1] == "good", "series": s.iloc[-120:]}
+
+
+# ---- 5. Yield curve & rates ----------------------------------------------------
+def analyze_rates():
+    curve = fred_series("T10Y2Y") * 100      # bps
+    y10 = fred_series("DGS10")
+    y2 = fred_series("DGS2")
+    c = curve.iloc[-1]
+    c5, c20 = c - curve.iloc[-6], c - curve.iloc[-21]
+    y10_c20 = (y10.iloc[-1] - y10.iloc[-21]) * 100
+    y2_c20 = (y2.iloc[-1] - y2.iloc[-21]) * 100
+    rates_stable = abs(y10_c20) < RATES_STABLE_BPS
+
+    if c20 <= -CURVE_MOVE_BPS:
+        status = ("FLATTENING", "bad",
+                  f"Curve flattened {abs(c20):.0f} bps in 20 days, a sign of growth and credit stress.")
+    elif c20 >= CURVE_MOVE_BPS:
+        status = ("STEEPENING", "neutral",
+                  f"Curve steepened {c20:.0f} bps in 20 days, often as markets price in rate cuts.")
+    else:
+        status = ("STABLE", "good", "Curve little changed over 20 days.")
+    status = (status[0], status[1], status[2] + (
+        f" 10-year yield {'stabilizing' if rates_stable else 'still moving fast'} "
+        f"({y10_c20:+.0f} bps in 20 days)."))
+
+    return {"date": curve.index[-1], "curve": c, "c5": c5, "c20": c20,
+            "y10": y10.iloc[-1], "y2": y2.iloc[-1], "y10_c20": y10_c20, "y2_c20": y2_c20,
+            "rates_stable": rates_stable, "alert": status,
+            "ok": status[0] != "FLATTENING" and rates_stable, "series": curve.iloc[-120:]}
+
+
+# ---- Bottom checklist ----------------------------------------------------------
+def checklist(vix, br, hy, dx, rt):
+    items = []
+    fd = vix["recent_fast_drops"]
+    still_below = vix["last"] < VIX_LINE
+    if fd and still_below:
+        detail = f"Yes, {fd[-1]:%b %d}, still below"
+    elif fd:
+        detail = f"Did on {fd[-1]:%b %d}, but back above 25 ({vix['last']:.1f})"
+    else:
+        detail = f"No, VIX {vix['last']:.1f}"
+    items.append(("VIX dropped fast below 25 and stayed there", bool(fd) and still_below, detail))
+    if vix["ts_ratio"] is not None:
+        r, mx = vix["ts_ratio"], vix["ts_recent_max"]
+        ok = r < 1
+        detail = (f"Calm ({r:.2f})" + (" after panic in last 20 days" if ok and mx >= 1 else "")
+                  if ok else f"Panic: short-term fear above 3-month ({r:.2f})")
+        items.append(("VIX term structure back to normal", ok, detail))
+    items.append(("A 90% up day (last 10 days)", br["up90_last10"],
+                  "Yes" if br["up90_last10"] else "None yet"))
+    a, mn = br["pct_above50"], br["above50_min20"]
+    ok = a >= 50 or (mn < WASHOUT_PCT and a >= mn + 10)
+    items.append(("Stocks recovering above 50-day averages", ok,
+                  f"{a:.0f}% above (20-day low {mn:.0f}%)"))
+    ok = hy["c20"] < 0 and hy["alert"][0] != "VOLATILE"
+    items.append(("Junk spreads calming and narrowing", ok,
+                  f"{hy['alert'][0].title()}, {hy['c20']:+.0f} bps in 20 days"))
+    items.append(("Dollar reversing lower", dx["ok"], dx["alert"][0].title()))
+    items.append(("Yield curve not flattening, rates stable", rt["ok"],
+                  f"{rt['alert'][0].title()}, 10y {rt['y10_c20']:+.0f} bps in 20d"))
+    return items
+
+
 # ---- History log -------------------------------------------------------------
-def append_history(vix, br, hy):
+def append_history(vix, br, hy, dx, rt, checks):
     row = {
         "run_date": datetime.now().strftime("%Y-%m-%d"),
         "vix_date": f"{vix['date']:%Y-%m-%d}",
@@ -283,6 +405,16 @@ def append_history(vix, br, hy):
         "hy_chg_20d_bps": round(hy["c20"]),
         "hy_vol_pctile": round(hy["vol_pctile"]),
         "hy_status": hy["alert"][0],
+        "vix_vs_vix3m": round(vix["ts_ratio"], 3) if vix["ts_ratio"] is not None else "",
+        "pct_above_50dma": round(br["pct_above50"], 1),
+        "dxy": round(dx["last"], 2),
+        "dxy_chg_1d_pct": round(dx["c1"], 2),
+        "dxy_status": dx["alert"][0],
+        "curve_10y2y_bps": round(rt["curve"]),
+        "curve_chg_20d_bps": round(rt["c20"]),
+        "us10y": round(rt["y10"], 2),
+        "curve_status": rt["alert"][0],
+        "bottom_score": f"{sum(ok for _, ok, _ in checks)}/{len(checks)}",
     }
     rows = []
     if os.path.exists(HISTORY):
@@ -338,17 +470,27 @@ def badge(alert):
     return f'<div class="badge {tone}">{label}</div><p class="why">{text}</p>'
 
 
-def render(vix, br, hy, history):
+def render(vix, br, hy, dx, rt, checks, history):
     d1, d5, d20 = vix["d1"], vix["d5"], vix["d20"]
     cross = f"{vix['cross_date']:%b %d, %Y}" if vix["cross_date"] is not None else "–"
     fmt_days = lambda ds: ", ".join(f"{d:%b %d}" for d in ds[-8:]) or "none"
+
+    score = sum(ok for _, ok, _ in checks)
+    check_rows = "".join(
+        f'<li class="{"on" if ok else "off"}"><span class="mark">{"✓" if ok else "✗"}</span>'
+        f'<span class="cname">{name}</span><span class="cdet">{detail}</span></li>'
+        for name, ok, detail in checks)
+    ts = (f"{vix['ts_ratio']:.2f} " + ("(panic: above 1)" if vix["ts_ratio"] >= 1 else "(normal: below 1)")
+          if vix["ts_ratio"] is not None else "–")
 
     hist_rows = "".join(
         f"<tr><td>{r['vix_date']}</td><td>{r['vix']}</td><td>{r['vix_chg_1d']}</td>"
         f"<td>{'✔' if r['vix_fast_drop_below_25'] == 'True' else ''}</td>"
         f"<td>{r['pct_stocks_up']}%</td>"
         f"<td>{'▲ 90%' if r['ninety_pct_up_day'] == 'True' else ('▼ 90%' if r['ninety_pct_down_day'] == 'True' else '')}</td>"
-        f"<td>{r['hy_oas_bps']}</td><td>{r['hy_status']}</td></tr>"
+        f"<td>{r['hy_oas_bps']}</td><td>{r['hy_status']}</td>"
+        f"<td>{r.get('dxy') or ''}</td><td>{r.get('curve_10y2y_bps') or ''}</td>"
+        f"<td>{r.get('bottom_score') or ''}</td></tr>"
         for r in reversed(history[-30:]))
 
     return f"""<!doctype html>
@@ -392,11 +534,23 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 .hist th, .hist td {{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap }}
 .hist th {{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em }}
 .sub a {{ color:var(--accent); font-weight:600; text-decoration:none }}
+.check {{ margin-bottom:16px }}
+.score {{ font-size:34px; font-weight:700; margin:6px 0 10px }} .score small {{ font-size:15px; color:var(--muted); font-weight:500 }}
+.check ul {{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:6px 24px }}
+.check li {{ display:flex; gap:10px; align-items:baseline; padding:7px 0; border-top:1px solid var(--line) }}
+.check .mark {{ font-weight:700; width:16px }} .check li.on .mark {{ color:var(--good) }} .check li.off .mark {{ color:var(--bad) }}
+.check .cname {{ flex:1 }} .check .cdet {{ color:var(--muted); font-size:13px; text-align:right }}
 .notes {{ color:var(--muted); font-size:13px; margin-top:20px }}
 </style></head><body><main>
 <h1>Market Bottom Daily Read</h1>
 <p class="sub">Updated {datetime.now():%a %b %d, %Y · %I:%M %p} ET ·
 <a href="{REFRESH_URL}">Refresh now ↻</a></p>
+
+<section class="card check">
+  <h2>Bottom checklist</h2>
+  <div class="score">{score} of {len(checks)}<small> signals point to a bottom</small></div>
+  <ul>{check_rows}</ul>
+</section>
 
 <div class="grid">
   <section class="card">
@@ -410,6 +564,7 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
       <tr><td>{VIX_LOOKBACK}-day high</td><td>{vix['recent_high']:.2f} ({vix['recent_high_date']:%b %d})</td></tr>
       <tr><td>Change from that high</td><td>{signed(vix['drop_from_high'], '%', 1)}</td></tr>
       <tr><td>Last cross below 25</td><td>{cross}</td></tr>
+      <tr><td>VIX ÷ 3-month VIX</td><td>{ts}</td></tr>
     </table>
     {sparkline(vix['series'], line=VIX_LINE, fmt="{:.0f}")}
     <div class="cap">Last 6 months · dashed line = 25</div>
@@ -424,6 +579,7 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
       <tr><td>Stocks down</td><td>{br['pct_down']:.1f}%</td></tr>
       <tr><td>Share of volume in rising stocks</td><td>{br['up_vol_pct']:.1f}%</td></tr>
       <tr><td>90% up days (last 60)</td><td>{len(br['up90_days'])} — {fmt_days(br['up90_days'])}</td></tr>
+      <tr><td>Stocks above 50-day average</td><td>{br['pct_above50']:.0f}% (20-day low {br['above50_min20']:.0f}%)</td></tr>
       <tr><td>90% down days (last 60)</td><td>{len(br['down90_days'])} — {fmt_days(br['down90_days'])}</td></tr>
     </table>
     {sparkline(br['series'], line=BREADTH_THRUST, bars=True, fmt="{:.0f}%")}
@@ -444,12 +600,42 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
     {sparkline(hy['series'], fmt="{:.0f}")}
     <div class="cap">Last ~6 months · rising line = spreads widening (more stress)</div>
   </section>
+
+  <section class="card">
+    <h2>US dollar index · DXY</h2>
+    <div class="big">{dx['last']:.2f}<small>{dx['date']:%b %d}</small></div>
+    {badge(dx['alert'])}
+    <table class="kv">
+      <tr><td>1-day change</td><td>{signed(dx['c1'], '%')}</td></tr>
+      <tr><td>5-day change</td><td>{signed(dx['c5'], '%')}</td></tr>
+      <tr><td>20-day change</td><td>{signed(dx['c20'], '%')}</td></tr>
+      <tr><td>60-day high</td><td>{dx['hi60']:.2f} ({dx['hi_date']:%b %d})</td></tr>
+      <tr><td>Change from that high</td><td>{signed(dx['off_high'], '%')}</td></tr>
+      <tr><td>50-day average</td><td>{dx['ma50']:.2f}</td></tr>
+    </table>
+    {sparkline(dx['series'], fmt="{:.0f}")}
+    <div class="cap">Last 6 months · a strong, rising dollar is a headwind for stocks</div>
+  </section>
+
+  <section class="card">
+    <h2>Yield curve · 10y minus 2y</h2>
+    <div class="big">{rt['curve']:+.0f}<small>bps · {rt['date']:%b %d}</small></div>
+    {badge(rt['alert'])}
+    <table class="kv">
+      <tr><td>5-day change</td><td>{signed(rt['c5'], ' bps', 0)}</td></tr>
+      <tr><td>20-day change</td><td>{signed(rt['c20'], ' bps', 0)}</td></tr>
+      <tr><td>10-year yield</td><td>{rt['y10']:.2f}% ({signed(rt['y10_c20'], ' bps', 0)} in 20d)</td></tr>
+      <tr><td>2-year yield</td><td>{rt['y2']:.2f}% ({signed(rt['y2_c20'], ' bps', 0)} in 20d)</td></tr>
+    </table>
+    {sparkline(rt['series'], line=0, fmt="{:.0f}")}
+    <div class="cap">Last ~6 months · dashed line = 0 (inverted below)</div>
+  </section>
 </div>
 
 <section class="card hist">
   <h2>Daily log</h2>
   <table><thead><tr><th>Date</th><th>VIX</th><th>VIX 1d</th><th>Fast drop &lt;25</th>
-  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th></tr></thead>
+  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th><th>DXY</th><th>Curve</th><th>Score</th></tr></thead>
   <tbody>{hist_rows}</tbody></table>
 </section>
 
@@ -462,6 +648,10 @@ This is a large-cap proxy; the classic Lowry study uses NYSE up-volume and point
 <b>Junk spreads:</b> ICE BofA US High Yield option-adjusted spread from FRED (usually one business day behind).
 Volatile = 20-day swing size in the top {100 - HY_VOLATILE_PCTILE}% of the past year, or widening of {HY_WIDEN_5D_BPS}+ bps in 5 days or {HY_WIDEN_20D_BPS}+ bps in 20 days.
 Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
+<b>VIX term structure:</b> VIX divided by the 3-month VIX; above 1 means short-term fear exceeds longer-term fear (panic), and a move back below 1 often comes near bottoms.
+<b>Stocks above 50-day average:</b> under {WASHOUT_PCT}% is a washout; the checklist turns on when it's above 50%, or 10+ points up from a washout low.
+<b>Dollar:</b> ICE US Dollar Index. Reversing = made a 60-day high in the last 20 sessions, now {DXY_REVERSAL_PCT}%+ below it and under its 20-day average.
+<b>Yield curve:</b> 10-year minus 2-year Treasury yield from FRED (one business day behind). Flattening/steepening = {CURVE_MOVE_BPS}+ bps move in 20 days; rates stable = 10-year moved less than {RATES_STABLE_BPS} bps in 20 days.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
@@ -475,14 +665,23 @@ def main():
     hy = analyze_hy()
     print("Fetching ~500 S&P 500 stocks for breadth (about a minute)…")
     br = analyze_breadth()
-    history = append_history(vix, br, hy)
+    print("Fetching dollar and Treasury yields…")
+    dx = analyze_dollar()
+    rt = analyze_rates()
+    checks = checklist(vix, br, hy, dx, rt)
+    history = append_history(vix, br, hy, dx, rt, checks)
     with open(REPORT, "w") as f:
-        f.write(render(vix, br, hy, history))
+        f.write(render(vix, br, hy, dx, rt, checks, history))
 
     d1 = vix["d1"]
     print(f"\nVIX  {vix['last']:.2f} ({d1[0]:+.2f}, {d1[1]:+.1f}%)  -> {vix['alert'][0]}")
     print(f"Breadth {br['pct_up']:.1f}% up / {br['pct_down']:.1f}% down ({br['date']:%Y-%m-%d})  -> {br['alert'][0]}")
     print(f"HY OAS {hy['last']:.0f} bps ({hy['c1']:+.0f} 1d, {hy['c20']:+.0f} 20d)  -> {hy['alert'][0]}")
+    print(f"Dollar {dx['last']:.2f} ({dx['c1']:+.2f}%)  -> {dx['alert'][0]}")
+    print(f"Curve {rt['curve']:+.0f} bps ({rt['c20']:+.0f} 20d), 10y {rt['y10']:.2f}%  -> {rt['alert'][0]}")
+    print(f"Bottom checklist: {sum(ok for _, ok, _ in checks)}/{len(checks)}")
+    for name, ok, detail in checks:
+        print(f"  [{'x' if ok else ' '}] {name}: {detail}")
     print(f"\nReport: {REPORT}")
 
 

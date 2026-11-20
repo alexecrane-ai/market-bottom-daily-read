@@ -39,11 +39,23 @@ table.kv td { padding:6px 0; border-top:1px solid var(--line) } table.kv td:last
 .hist th, .hist td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap }
 .hist th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em }
 .sub a { color:var(--accent); font-weight:600; text-decoration:none }
+.check { margin-bottom:16px }
+.score { font-size:34px; font-weight:700; margin:6px 0 10px } .score small { font-size:15px; color:var(--muted); font-weight:500 }
+.check ul { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:6px 24px }
+.check li { display:flex; gap:10px; align-items:baseline; padding:7px 0; border-top:1px solid var(--line) }
+.check .mark { font-weight:700; width:16px } .check li.on .mark { color:var(--good) } .check li.off .mark { color:var(--bad) }
+.check .cname { flex:1 } .check .cdet { color:var(--muted); font-size:13px; text-align:right }
 .notes { color:var(--muted); font-size:13px; margin-top:20px }
 </style></head><body><main>
 <h1>Market Bottom Daily Read</h1>
-<p class="sub">Updated Thu Nov 19, 2026 · 09:45 PM ET ·
+<p class="sub">Updated Thu Nov 19, 2026 · 10:04 PM ET ·
 <a href="https://github.com/alexecrane-ai/market-bottom-daily-read/actions/workflows/daily.yml">Refresh now ↻</a></p>
+
+<section class="card check">
+  <h2>Bottom checklist</h2>
+  <div class="score">1 of 7<small> signals point to a bottom</small></div>
+  <ul><li class="off"><span class="mark">✗</span><span class="cname">VIX dropped fast below 25 and stayed there</span><span class="cdet">Did on Nov 13, but back above 25 (28.4)</span></li><li class="off"><span class="mark">✗</span><span class="cname">VIX term structure back to normal</span><span class="cdet">Panic: short-term fear above 3-month (1.05)</span></li><li class="off"><span class="mark">✗</span><span class="cname">A 90% up day (last 10 days)</span><span class="cdet">None yet</span></li><li class="off"><span class="mark">✗</span><span class="cname">Stocks recovering above 50-day averages</span><span class="cdet">49% above (20-day low 49%)</span></li><li class="off"><span class="mark">✗</span><span class="cname">Junk spreads calming and narrowing</span><span class="cdet">Volatile, +20 bps in 20 days</span></li><li class="off"><span class="mark">✗</span><span class="cname">Dollar reversing lower</span><span class="cdet">At Highs</span></li><li class="on"><span class="mark">✓</span><span class="cname">Yield curve not flattening, rates stable</span><span class="cdet">Stable, 10y -5 bps in 20d</span></li></ul>
+</section>
 
 <div class="grid">
   <section class="card">
@@ -57,6 +69,7 @@ table.kv td { padding:6px 0; border-top:1px solid var(--line) } table.kv td:last
       <tr><td>10-day high</td><td>28.44 (Nov 19)</td></tr>
       <tr><td>Change from that high</td><td><span class="">+0.0%</span></td></tr>
       <tr><td>Last cross below 25</td><td>Nov 18, 2026</td></tr>
+      <tr><td>VIX ÷ 3-month VIX</td><td>1.05 (panic: above 1)</td></tr>
     </table>
     <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><line x1="0" x2="560" y1="35.1" y2="35.1" class="ref"/><text x="556" y="31.1" class="reflbl">25</text><polyline points="4.0,95.7 8.6,100.2 13.3,58.7 17.9,76.3 22.6,69.9 27.2,53.9 31.8,72.8 36.5,84.7 41.1,94.8 45.7,93.3 50.4,79.6 55.0,93.4 59.7,87.4 64.3,72.5 68.9,78.3 73.6,76.5 78.2,79.8 82.9,84.9 87.5,93.1 92.1,92.1 96.8,95.1 101.4,99.0 106.1,95.2 110.7,90.0 115.3,97.2 120.0,102.7 124.6,88.3 129.2,92.7 133.9,98.4 138.5,91.2 143.2,77.3 147.8,78.2 152.4,89.0 157.1,91.8 161.7,77.8 166.4,78.6 171.0,78.0 175.6,81.1 180.3,64.5 184.9,88.7 189.5,96.2 194.2,97.1 198.8,92.7 203.5,97.4 208.1,101.9 212.7,103.6 217.4,99.8 222.0,101.0 226.7,106.0 231.3,105.4 235.9,108.0 240.6,101.6 245.2,97.2 249.8,103.7 254.5,96.1 259.1,102.0 263.8,97.1 268.4,99.9 273.0,101.5 277.7,106.2 282.3,106.8 287.0,103.5 291.6,93.8 296.2,101.6 300.9,107.5 305.5,106.1 310.2,100.9 314.8,98.0 319.4,93.0 324.1,83.6 328.7,97.2 333.3,88.7 338.0,88.0 342.6,84.5 347.3,99.9 351.9,104.2 356.5,103.8 361.2,108.3 365.8,101.7 370.5,98.4 375.1,103.8 379.7,95.7 384.4,95.9 389.0,93.8 393.6,93.5 398.3,100.8 402.9,99.4 407.6,102.8 412.2,102.4 416.8,100.1 421.5,104.0 426.1,101.5 430.8,101.1 435.4,90.2 440.0,93.0 444.7,69.1 449.3,79.6 453.9,87.2 458.6,91.5 463.2,75.6 467.9,72.7 472.5,79.9 477.1,85.8 481.8,90.0 486.4,88.0 491.1,72.9 495.7,61.2 500.3,63.4 505.0,92.0 509.6,13.5 514.3,30.7 518.9,69.5 523.5,72.7 528.2,86.0 532.8,77.8 537.4,73.7 542.1,49.2 546.7,31.9 551.4,38.1 556.0,11.7" class="ln"/><circle cx="556.0" cy="11.7" r="3.5" class="dot"/></svg>
     <div class="cap">Last 6 months · dashed line = 25</div>
@@ -71,6 +84,7 @@ table.kv td { padding:6px 0; border-top:1px solid var(--line) } table.kv td:last
       <tr><td>Stocks down</td><td>92.2%</td></tr>
       <tr><td>Share of volume in rising stocks</td><td>10.7%</td></tr>
       <tr><td>90% up days (last 60)</td><td>0 — none</td></tr>
+      <tr><td>Stocks above 50-day average</td><td>49% (20-day low 49%)</td></tr>
       <tr><td>90% down days (last 60)</td><td>1 — Nov 19</td></tr>
     </table>
     <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><line x1="0" x2="560" y1="15.2" y2="15.2" class="ref"/><text x="556" y="11.2" class="reflbl">90%</text><rect x="4.0" y="81.9" width="6.9" height="34.1" class="bar"/><rect x="13.2" y="65.6" width="6.9" height="50.4" class="bar"/><rect x="22.4" y="85.9" width="6.9" height="30.1" class="bar"/><rect x="31.6" y="80.7" width="6.9" height="35.3" class="bar"/><rect x="40.8" y="49.7" width="6.9" height="66.3" class="bar"/><rect x="50.0" y="39.7" width="6.9" height="76.3" class="bar"/><rect x="59.2" y="76.5" width="6.9" height="39.5" class="bar"/><rect x="68.4" y="83.0" width="6.9" height="33.0" class="bar"/><rect x="77.6" y="93.7" width="6.9" height="22.3" class="bar"/><rect x="86.8" y="79.2" width="6.9" height="36.8" class="bar"/><rect x="96.0" y="40.8" width="6.9" height="75.2" class="bar"/><rect x="105.2" y="53.1" width="6.9" height="62.9" class="bar"/><rect x="114.4" y="80.7" width="6.9" height="35.3" class="bar"/><rect x="123.6" y="80.1" width="6.9" height="35.9" class="bar"/><rect x="132.8" y="50.4" width="6.9" height="65.6" class="bar"/><rect x="142.0" y="81.2" width="6.9" height="34.8" class="bar"/><rect x="151.2" y="50.9" width="6.9" height="65.1" class="bar"/><rect x="160.4" y="60.7" width="6.9" height="55.3" class="bar"/><rect x="169.6" y="77.8" width="6.9" height="38.2" class="bar"/><rect x="178.8" y="76.5" width="6.9" height="39.5" class="bar"/><rect x="188.0" y="43.0" width="6.9" height="73.0" class="bar"/><rect x="197.2" y="79.4" width="6.9" height="36.6" class="bar"/><rect x="206.4" y="72.0" width="6.9" height="44.0" class="bar"/><rect x="215.6" y="90.3" width="6.9" height="25.7" class="bar"/><rect x="224.8" y="49.5" width="6.9" height="66.5" class="bar"/><rect x="234.0" y="50.8" width="6.9" height="65.2" class="bar"/><rect x="243.2" y="45.4" width="6.9" height="70.6" class="bar"/><rect x="252.4" y="40.7" width="6.9" height="75.3" class="bar"/><rect x="261.6" y="85.3" width="6.9" height="30.7" class="bar"/><rect x="270.8" y="40.5" width="6.9" height="75.5" class="bar"/><rect x="280.0" y="44.7" width="6.9" height="71.3" class="bar"/><rect x="289.2" y="44.7" width="6.9" height="71.3" class="bar"/><rect x="298.4" y="57.0" width="6.9" height="59.0" class="bar"/><rect x="307.6" y="62.6" width="6.9" height="53.4" class="bar"/><rect x="316.8" y="31.6" width="6.9" height="84.4" class="bar"/><rect x="326.0" y="60.8" width="6.9" height="55.2" class="bar"/><rect x="335.2" y="76.6" width="6.9" height="39.4" class="bar"/><rect x="344.4" y="26.0" width="6.9" height="90.0" class="bar"/><rect x="353.6" y="53.2" width="6.9" height="62.8" class="bar"/><rect x="362.8" y="41.4" width="6.9" height="74.6" class="bar"/><rect x="372.0" y="85.7" width="6.9" height="30.3" class="bar"/><rect x="381.2" y="51.4" width="6.9" height="64.6" class="bar"/><rect x="390.4" y="61.2" width="6.9" height="54.8" class="bar"/><rect x="399.6" y="61.0" width="6.9" height="55.0" class="bar"/><rect x="408.8" y="25.8" width="6.9" height="90.2" class="bar"/><rect x="418.0" y="65.7" width="6.9" height="50.3" class="bar"/><rect x="427.2" y="39.0" width="6.9" height="77.0" class="bar"/><rect x="436.4" y="73.7" width="6.9" height="42.3" class="bar"/><rect x="445.6" y="32.3" width="6.9" height="83.7" class="bar"/><rect x="454.8" y="99.7" width="6.9" height="16.3" class="bar"/><rect x="464.0" y="75.0" width="6.9" height="41.0" class="bar"/><rect x="473.2" y="21.8" width="6.9" height="94.2" class="bar"/><rect x="482.4" y="61.0" width="6.9" height="55.0" class="bar"/><rect x="491.6" y="42.1" width="6.9" height="73.9" class="bar"/><rect x="500.8" y="88.4" width="6.9" height="27.6" class="bar"/><rect x="510.0" y="45.9" width="6.9" height="70.1" class="bar"/><rect x="519.2" y="83.7" width="6.9" height="32.3" class="bar"/><rect x="528.4" y="99.3" width="6.9" height="16.7" class="bar"/><rect x="537.6" y="63.2" width="6.9" height="52.8" class="bar"/><rect x="546.8" y="107.5" width="6.9" height="8.5" class="bar low"/></svg>
@@ -91,13 +105,43 @@ table.kv td { padding:6px 0; border-top:1px solid var(--line) } table.kv td:last
     <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><polyline points="4.0,92.9 8.6,90.7 13.3,91.8 17.9,88.5 22.6,86.3 27.2,88.5 31.8,96.2 36.5,101.7 41.1,96.2 45.7,105.0 50.4,101.7 55.0,101.7 59.7,102.8 64.3,96.2 68.9,90.7 73.6,88.5 78.2,83.0 82.9,86.3 87.5,91.8 92.1,92.9 96.8,91.8 101.4,92.9 106.1,95.1 110.7,100.6 115.3,97.3 120.0,97.3 124.6,98.4 129.2,98.4 133.9,95.1 138.5,96.2 143.2,96.2 147.8,94.0 152.4,98.4 157.1,98.4 161.7,99.5 166.4,89.6 171.0,87.4 175.6,85.2 180.3,81.9 184.9,78.7 189.5,81.9 194.2,80.8 198.8,88.5 203.5,94.0 208.1,91.8 212.7,96.2 217.4,97.3 222.0,97.3 226.7,95.1 231.3,96.2 235.9,96.2 240.6,100.6 245.2,97.3 249.8,91.8 254.5,94.0 259.1,91.8 263.8,97.3 268.4,98.4 273.0,97.3 277.7,100.6 282.3,105.0 287.0,108.3 291.6,105.0 296.2,102.8 300.9,101.7 305.5,102.8 310.2,99.5 314.8,99.5 319.4,100.6 324.1,96.2 328.7,97.3 333.3,102.8 338.0,96.2 342.6,90.7 347.3,97.3 351.9,97.3 356.5,99.5 361.2,101.7 365.8,99.5 370.5,94.0 375.1,86.3 379.7,72.1 384.4,62.2 389.0,55.6 393.6,51.2 398.3,38.1 402.9,53.4 407.6,51.2 412.2,61.1 416.8,54.5 421.5,47.9 426.1,52.3 430.8,52.3 435.4,46.8 440.0,37.0 444.7,39.2 449.3,30.4 453.9,32.6 458.6,28.2 463.2,34.8 467.9,20.5 472.5,22.7 477.1,31.5 481.8,44.6 486.4,49.0 491.1,35.9 495.7,16.1 500.3,17.2 505.0,20.5 509.6,29.3 514.3,11.7 518.9,18.3 523.5,27.1 528.2,31.5 532.8,31.5 537.4,42.4 542.1,39.2 546.7,27.1 551.4,17.2 556.0,12.8" class="ln"/><circle cx="556.0" cy="12.8" r="3.5" class="dot"/></svg>
     <div class="cap">Last ~6 months · rising line = spreads widening (more stress)</div>
   </section>
+
+  <section class="card">
+    <h2>US dollar index · DXY</h2>
+    <div class="big">103.88<small>Nov 19</small></div>
+    <div class="badge bad">AT HIGHS</div><p class="why">Strong dollar at or near a 60-day high, still a headwind.</p>
+    <table class="kv">
+      <tr><td>1-day change</td><td><span class="up">+0.02%</span></td></tr>
+      <tr><td>5-day change</td><td><span class="up">+0.69%</span></td></tr>
+      <tr><td>20-day change</td><td><span class="up">+2.23%</span></td></tr>
+      <tr><td>60-day high</td><td>103.88 (Nov 19)</td></tr>
+      <tr><td>Change from that high</td><td><span class="">+0.00%</span></td></tr>
+      <tr><td>50-day average</td><td>101.79</td></tr>
+    </table>
+    <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><polyline points="4.0,99.8 8.6,93.9 13.3,96.2 17.9,83.7 22.6,84.1 27.2,86.7 31.8,86.0 36.5,87.7 41.1,89.8 45.7,92.0 50.4,93.7 55.0,83.3 59.7,69.0 64.3,65.8 68.9,58.4 73.6,54.6 78.2,58.0 82.9,59.3 87.5,64.1 92.1,62.5 96.8,58.8 101.4,68.8 106.1,69.0 110.7,63.5 115.3,65.2 120.0,67.3 124.6,66.7 129.2,60.8 133.9,67.3 138.5,75.6 143.2,71.2 147.8,70.9 152.4,66.3 157.1,62.7 161.7,63.5 166.4,58.0 171.0,57.3 175.6,56.5 180.3,59.0 184.9,69.9 189.5,84.8 194.2,88.8 198.8,85.8 203.5,87.1 208.1,90.9 212.7,85.6 217.4,92.6 222.0,88.6 226.7,88.4 231.3,84.8 235.9,85.8 240.6,91.3 245.2,91.8 249.8,91.6 254.5,107.1 259.1,105.8 263.8,107.7 268.4,103.9 273.0,105.4 277.7,100.7 282.3,100.9 287.0,90.7 291.6,95.8 296.2,91.3 300.9,93.3 305.5,103.9 310.2,100.9 314.8,107.0 319.4,108.3 324.1,102.2 328.7,101.7 333.3,95.2 338.0,91.6 342.6,79.2 347.3,80.9 351.9,80.9 356.5,76.9 361.2,73.7 365.8,64.2 370.5,60.7 375.1,66.7 379.7,62.4 384.4,59.1 389.0,57.6 393.6,45.3 398.3,48.6 402.9,44.0 407.6,50.4 412.2,42.7 416.8,44.6 421.5,43.3 426.1,36.3 430.8,43.8 435.4,36.8 440.0,47.2 444.7,50.3 449.3,47.6 453.9,52.3 458.6,51.4 463.2,54.6 467.9,50.8 472.5,48.0 477.1,41.2 481.8,43.6 486.4,46.5 491.1,49.5 495.7,52.0 500.3,49.7 505.0,56.5 509.6,55.7 514.3,41.6 518.9,53.8 523.5,42.9 528.2,30.0 532.8,25.1 537.4,20.6 542.1,17.9 546.7,19.1 551.4,12.1 556.0,11.7" class="ln"/><circle cx="556.0" cy="11.7" r="3.5" class="dot"/></svg>
+    <div class="cap">Last 6 months · a strong, rising dollar is a headwind for stocks</div>
+  </section>
+
+  <section class="card">
+    <h2>Yield curve · 10y minus 2y</h2>
+    <div class="big">+28<small>bps · Nov 19</small></div>
+    <div class="badge good">STABLE</div><p class="why">Curve little changed over 20 days. 10-year yield stabilizing (-5 bps in 20 days).</p>
+    <table class="kv">
+      <tr><td>5-day change</td><td><span class="up">+4 bps</span></td></tr>
+      <tr><td>20-day change</td><td><span class="down">-4 bps</span></td></tr>
+      <tr><td>10-year yield</td><td>5.07% (<span class="down">-5 bps</span> in 20d)</td></tr>
+      <tr><td>2-year yield</td><td>4.80% (<span class="up">+1 bps</span> in 20d)</td></tr>
+    </table>
+    <svg viewBox="0 0 560 120" preserveAspectRatio="none" class="spark"><line x1="0" x2="560" y1="108.3" y2="108.3" class="ref"/><text x="556" y="104.3" class="reflbl">0</text><polyline points="4.0,22.7 8.6,31.8 13.3,33.6 17.9,33.6 22.6,31.8 27.2,39.1 31.8,33.6 36.5,35.4 41.1,31.8 45.7,35.4 50.4,37.2 55.0,35.4 59.7,39.1 64.3,55.4 68.9,59.1 73.6,59.1 78.2,46.3 82.9,53.6 87.5,51.8 92.1,51.8 96.8,57.3 101.4,53.6 106.1,51.8 110.7,44.5 115.3,44.5 120.0,42.7 124.6,44.5 129.2,39.1 133.9,44.5 138.5,42.7 143.2,35.4 147.8,31.8 152.4,33.6 157.1,40.9 161.7,37.2 166.4,40.9 171.0,42.7 175.6,46.3 180.3,42.7 184.9,46.3 189.5,44.5 194.2,26.3 198.8,26.3 203.5,22.7 208.1,26.3 212.7,29.9 217.4,26.3 222.0,28.1 226.7,24.5 231.3,22.7 235.9,20.8 240.6,20.8 245.2,20.8 249.8,15.4 254.5,11.7 259.1,13.5 263.8,24.5 268.4,17.2 273.0,17.2 277.7,24.5 282.3,22.7 287.0,22.7 291.6,22.7 296.2,37.2 300.9,33.6 305.5,35.4 310.2,35.4 314.8,29.9 319.4,33.6 324.1,33.6 328.7,35.4 333.3,37.2 338.0,48.2 342.6,50.0 347.3,48.2 351.9,59.1 356.5,59.1 361.2,62.7 365.8,71.8 370.5,62.7 375.1,60.9 379.7,51.8 384.4,42.7 389.0,50.0 393.6,40.9 398.3,33.6 402.9,24.5 407.6,26.3 412.2,22.7 416.8,20.8 421.5,15.4 426.1,22.7 430.8,28.1 435.4,31.8 440.0,40.9 444.7,48.2 449.3,44.5 453.9,39.1 458.6,48.2 463.2,50.0 467.9,51.8 472.5,51.8 477.1,50.0 481.8,55.4 486.4,39.1 491.1,40.9 495.7,39.1 500.3,50.0 505.0,46.3 509.6,50.0 514.3,39.1 518.9,44.5 523.5,50.0 528.2,62.7 532.8,64.6 537.4,59.1 542.1,55.4 546.7,53.6 551.4,59.1 556.0,57.3" class="ln"/><circle cx="556.0" cy="57.3" r="3.5" class="dot"/></svg>
+    <div class="cap">Last ~6 months · dashed line = 0 (inverted below)</div>
+  </section>
 </div>
 
 <section class="card hist">
   <h2>Daily log</h2>
   <table><thead><tr><th>Date</th><th>VIX</th><th>VIX 1d</th><th>Fast drop &lt;25</th>
-  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th></tr></thead>
-  <tbody><tr><td>2026-11-19</td><td>28.44</td><td>3.88</td><td></td><td>7.6%</td><td>▼ 90%</td><td>347</td><td>VOLATILE</td></tr></tbody></table>
+  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th><th>DXY</th><th>Curve</th><th>Score</th></tr></thead>
+  <tbody><tr><td>2026-11-19</td><td>28.44</td><td>3.88</td><td></td><td>7.6%</td><td>▼ 90%</td><td>347</td><td>VOLATILE</td><td>103.88</td><td>28</td><td>1/7</td></tr></tbody></table>
 </section>
 
 <p class="notes">
@@ -109,6 +153,10 @@ This is a large-cap proxy; the classic Lowry study uses NYSE up-volume and point
 <b>Junk spreads:</b> ICE BofA US High Yield option-adjusted spread from FRED (usually one business day behind).
 Volatile = 20-day swing size in the top 20% of the past year, or widening of 30+ bps in 5 days or 50+ bps in 20 days.
 Calm = swing size below the 50th percentile with little widening.
+<b>VIX term structure:</b> VIX divided by the 3-month VIX; above 1 means short-term fear exceeds longer-term fear (panic), and a move back below 1 often comes near bottoms.
+<b>Stocks above 50-day average:</b> under 20% is a washout; the checklist turns on when it's above 50%, or 10+ points up from a washout low.
+<b>Dollar:</b> ICE US Dollar Index. Reversing = made a 60-day high in the last 20 sessions, now 1.5%+ below it and under its 20-day average.
+<b>Yield curve:</b> 10-year minus 2-year Treasury yield from FRED (one business day behind). Flattening/steepening = 10+ bps move in 20 days; rates stable = 10-year moved less than 25 bps in 20 days.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
