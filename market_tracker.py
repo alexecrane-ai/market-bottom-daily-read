@@ -537,9 +537,9 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 .check {{ margin-bottom:16px }}
 .score {{ font-size:34px; font-weight:700; margin:6px 0 10px }} .score small {{ font-size:15px; color:var(--muted); font-weight:500 }}
 .check ul {{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:6px 24px }}
-.check li {{ display:flex; gap:10px; align-items:baseline; padding:7px 0; border-top:1px solid var(--line) }}
-.check .mark {{ font-weight:700; width:16px }} .check li.on .mark {{ color:var(--good) }} .check li.off .mark {{ color:var(--bad) }}
-.check .cname {{ flex:1 }} .check .cdet {{ color:var(--muted); font-size:13px; text-align:right }}
+.check li {{ display:grid; grid-template-columns:18px 1fr; column-gap:8px; padding:8px 0; border-top:1px solid var(--line) }}
+.check .mark {{ font-weight:700; grid-row:span 2 }} .check li.on .mark {{ color:var(--good) }} .check li.off .mark {{ color:var(--bad) }}
+.check .cname {{ font-weight:600 }} .check .cdet {{ color:var(--muted); font-size:13px }}
 .notes {{ color:var(--muted); font-size:13px; margin-top:20px }}
 </style></head><body><main>
 <h1>Market Bottom Daily Read</h1>
