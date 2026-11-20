@@ -7,6 +7,8 @@ Daily Market Tracker
 3. Junk     - ICE BofA US High Yield OAS: is it CALM, NORMAL or VOLATILE?
 4. Dollar   - US Dollar Index: still making highs, or reversing?
 5. Rates    - 10y-2y yield curve (flattening = stress) and whether 10y yields are stabilizing.
+6. Pressure - how many of the 11 S&P sectors fell, and failed rallies / reversals up
+             in the Nasdaq and S&P 500.
 Plus a "bottom checklist" that counts how many signals point to a bottom.
 
 Writes:  report.html   (open in any browser)
@@ -47,6 +49,7 @@ HY_WIDEN_5D_BPS = 30       # ... or this much in 5 days = volatile
 DXY_REVERSAL_PCT = 1.5     # dollar this far off a recent 60-day high (and under 20d avg) = reversing
 CURVE_MOVE_BPS = 10        # 10y-2y change over 20 days that counts as flattening/steepening
 RATES_STABLE_BPS = 25      # 10y yield moving less than this over 20 days = stabilizing
+RALLY_PCT = 1.0            # intraday move vs prior close that counts as a big rally/drop
 WASHOUT_PCT = 20           # under this % of stocks above their 50-day average = washed out
 
 
@@ -74,7 +77,8 @@ def yahoo_daily(symbol, rng="1y"):
     q = data["indicators"]["quote"][0]
     tz = data["meta"].get("exchangeTimezoneName", "America/New_York")
     idx = pd.to_datetime(ts, unit="s", utc=True).tz_convert(tz).normalize().tz_localize(None)
-    df = pd.DataFrame({"close": q.get("close"), "volume": q.get("volume")}, index=idx)
+    df = pd.DataFrame({"close": q.get("close"), "volume": q.get("volume"),
+                       "high": q.get("high"), "low": q.get("low")}, index=idx)
     df = df[~df.index.duplicated(keep="last")].dropna(subset=["close"])
     # Yahoo's daily bars often lag a session; the meta block has the latest close.
     meta = data["meta"]
@@ -82,7 +86,8 @@ def yahoo_daily(symbol, rng="1y"):
         mday = (pd.Timestamp(meta["regularMarketTime"], unit="s", tz="UTC")
                 .tz_convert(tz).normalize().tz_localize(None))
         if df.empty or mday > df.index[-1]:
-            df.loc[mday] = [meta["regularMarketPrice"], meta.get("regularMarketVolume")]
+            df.loc[mday] = [meta["regularMarketPrice"], meta.get("regularMarketVolume"),
+                            meta.get("regularMarketDayHigh"), meta.get("regularMarketDayLow")]
     return df
 
 
@@ -250,6 +255,11 @@ def analyze_breadth():
         "above50_min20": pct_above.iloc[-20:].min(),
         "above50_series": pct_above.iloc[-60:].dropna(),
         "up90_last10": bool((daily["pct_up"].iloc[-10:] >= BREADTH_THRUST).any()),
+        "last_down90": (daily.index[daily.pct_down >= BREADTH_THRUST][-1]
+                        if (daily.pct_down >= BREADTH_THRUST).any() else None),
+        "sessions_since_down90": (len(daily) - 1 - list(daily.index).index(
+            daily.index[daily.pct_down >= BREADTH_THRUST][-1])
+            if (daily.pct_down >= BREADTH_THRUST).any() else None),
     }
 
 
@@ -350,8 +360,72 @@ def analyze_rates():
             "ok": status[0] != "FLATTENING" and rates_stable, "series": curve.iloc[-120:]}
 
 
+# ---- 6. Selling pressure: sectors + failed rallies --------------------------------
+SECTORS = {"XLK": "Tech", "XLF": "Financials", "XLE": "Energy", "XLV": "Health care",
+           "XLY": "Discretionary", "XLP": "Staples", "XLI": "Industrials",
+           "XLB": "Materials", "XLU": "Utilities", "XLRE": "Real estate",
+           "XLC": "Communication"}
+INDEXES = {"^IXIC": "Nasdaq", "^GSPC": "S&P 500"}
+
+
+def analyze_pressure():
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        sec = dict(zip(SECTORS, ex.map(lambda t: yahoo_daily(t, "3mo")["close"], SECTORS)))
+        idx = dict(zip(INDEXES, ex.map(lambda t: yahoo_daily(t, "3mo"), INDEXES)))
+
+    rets = pd.DataFrame(sec).pct_change(fill_method=None).dropna(how="all") * 100
+    today = rets.iloc[-1].dropna()
+    n_down, n_up = int((today < 0).sum()), int((today > 0).sum())
+    n_down_series = (rets < 0).sum(axis=1)
+    n_up_series = (rets > 0).sum(axis=1)
+    best, worst = today.idxmax(), today.idxmin()
+
+    days = {}
+    failed_days, reversal_days = set(), set()
+    for sym, df in idx.items():
+        prev = df["close"].shift(1)
+        at_high = (df["high"] / prev - 1) * 100
+        at_low = (df["low"] / prev - 1) * 100
+        chg = (df["close"] / prev - 1) * 100
+        failed = (at_high >= RALLY_PCT) & (chg < 0)
+        reversal = (at_low <= -RALLY_PCT) & (chg > 0)
+        failed_days |= set(df.index[-20:][failed.iloc[-20:].values])
+        reversal_days |= set(df.index[-20:][reversal.iloc[-20:].values])
+        days[INDEXES[sym]] = {"date": df.index[-1], "at_high": at_high.iloc[-1],
+                              "at_low": at_low.iloc[-1], "chg": chg.iloc[-1],
+                              "failed": bool(failed.iloc[-1]), "reversal": bool(reversal.iloc[-1])}
+
+    d = days["Nasdaq"]
+    failed_today = any(v["failed"] for v in days.values())
+    reversal_today = any(v["reversal"] for v in days.values())
+    if failed_today:
+        who = " and ".join(k for k, v in days.items() if v["failed"])
+        status = ("FAILED RALLY", "bad",
+                  f"{who} rallied {max(v['at_high'] for v in days.values()):.1f}% then turned negative: "
+                  "sellers are using bounces to get out.")
+    elif reversal_today:
+        who = " and ".join(k for k, v in days.items() if v["reversal"])
+        status = ("REVERSAL UP", "good",
+                  f"{who} fell {abs(min(v['at_low'] for v in days.values())):.1f}% then closed higher: "
+                  "buyers stepped in on the dip.")
+    elif n_down >= 10:
+        status = ("BROAD SELLING", "bad", f"{n_down} of 11 sectors fell: money is leaving stocks, not rotating.")
+    elif n_up >= 10:
+        status = ("BROAD BUYING", "good", f"{n_up} of 11 sectors rose together.")
+    else:
+        status = ("MIXED", "neutral", f"{n_up} sectors up, {n_down} down.")
+
+    recent_buying = bool(reversal_days & set(rets.index[-5:])) or bool((n_up_series.iloc[-5:] >= 10).any())
+    return {"date": rets.index[-1], "n_down": n_down, "n_up": n_up,
+            "best": (SECTORS[best], today[best]), "worst": (SECTORS[worst], today[worst]),
+            "broad_down_days_10": int((n_down_series.iloc[-10:] >= 10).sum()),
+            "idx": days, "failed_today": failed_today, "reversal_today": reversal_today,
+            "failed_days": sorted(failed_days), "reversal_days": sorted(reversal_days),
+            "recent_buying": recent_buying, "alert": status}
+
+
 # ---- Bottom checklist ----------------------------------------------------------
-def checklist(vix, br, hy, dx, rt):
+def checklist(vix, br, hy, dx, rt, pr):
     items = []
     fd = vix["recent_fast_drops"]
     still_below = vix["last"] < VIX_LINE
@@ -368,8 +442,14 @@ def checklist(vix, br, hy, dx, rt):
         detail = (f"Calm ({r:.2f})" + (" after panic in last 20 days" if ok and mx >= 1 else "")
                   if ok else f"Panic: short-term fear above 3-month ({r:.2f})")
         items.append(("VIX term structure back to normal", ok, detail))
-    items.append(("A 90% up day (last 10 days)", br["up90_last10"],
-                  "Yes" if br["up90_last10"] else "None yet"))
+    if br["up90_last10"]:
+        detail = "Yes"
+    elif br["last_down90"] is not None and br["sessions_since_down90"] <= 10:
+        detail = (f"None yet. Last 90% down day {br['last_down90']:%b %d}; "
+                  "a 90% up day soon after would be the strongest signal")
+    else:
+        detail = "None yet"
+    items.append(("A 90% up day (last 10 days)", br["up90_last10"], detail))
     a, mn = br["pct_above50"], br["above50_min20"]
     ok = a >= 50 or (mn < WASHOUT_PCT and a >= mn + 10)
     items.append(("Stocks recovering above 50-day averages", ok,
@@ -380,11 +460,19 @@ def checklist(vix, br, hy, dx, rt):
     items.append(("Dollar reversing lower", dx["ok"], dx["alert"][0].title()))
     items.append(("Yield curve not flattening, rates stable", rt["ok"],
                   f"{rt['alert'][0].title()}, 10y {rt['y10_c20']:+.0f} bps in 20d"))
+    if pr["recent_buying"]:
+        detail = ("Reversal up on " + ", ".join(f"{d:%b %d}" for d in pr["reversal_days"][-2:])
+                  if pr["reversal_days"] else "10+ sectors up together")
+    else:
+        detail = (f"No. {pr['n_down']}/11 sectors down today"
+                  + (", failed rally today" if pr["failed_today"] else ""))
+    items.append(("Buyers stepping in: reversal up or 10+ sectors up (last 5 days)",
+                  pr["recent_buying"], detail))
     return items
 
 
 # ---- History log -------------------------------------------------------------
-def append_history(vix, br, hy, dx, rt, checks):
+def append_history(vix, br, hy, dx, rt, pr, checks):
     row = {
         "run_date": datetime.now().strftime("%Y-%m-%d"),
         "vix_date": f"{vix['date']:%Y-%m-%d}",
@@ -414,6 +502,9 @@ def append_history(vix, br, hy, dx, rt, checks):
         "curve_chg_20d_bps": round(rt["c20"]),
         "us10y": round(rt["y10"], 2),
         "curve_status": rt["alert"][0],
+        "sectors_down": pr["n_down"],
+        "failed_rally": pr["failed_today"],
+        "reversal_up": pr["reversal_today"],
         "bottom_score": f"{sum(ok for _, ok, _ in checks)}/{len(checks)}",
     }
     rows = []
@@ -470,12 +561,15 @@ def badge(alert):
     return f'<div class="badge {tone}">{label}</div><p class="why">{text}</p>'
 
 
-def render(vix, br, hy, dx, rt, checks, history):
+def render(vix, br, hy, dx, rt, pr, checks, history):
     d1, d5, d20 = vix["d1"], vix["d5"], vix["d20"]
     cross = f"{vix['cross_date']:%b %d, %Y}" if vix["cross_date"] is not None else "–"
     fmt_days = lambda ds: ", ".join(f"{d:%b %d}" for d in ds[-8:]) or "none"
 
     score = sum(ok for _, ok, _ in checks)
+    idx_rows = "".join(
+        f"<tr><td>{name}: high / close vs prior close</td><td>{signed(v['at_high'], '%', 1)} / {signed(v['chg'], '%', 1)}</td></tr>"
+        for name, v in pr["idx"].items())
     check_rows = "".join(
         f'<li class="{"on" if ok else "off"}"><span class="mark">{"✓" if ok else "✗"}</span>'
         f'<span class="cname">{name}</span><span class="cdet">{detail}</span></li>'
@@ -490,6 +584,8 @@ def render(vix, br, hy, dx, rt, checks, history):
         f"<td>{'▲ 90%' if r['ninety_pct_up_day'] == 'True' else ('▼ 90%' if r['ninety_pct_down_day'] == 'True' else '')}</td>"
         f"<td>{r['hy_oas_bps']}</td><td>{r['hy_status']}</td>"
         f"<td>{r.get('dxy') or ''}</td><td>{r.get('curve_10y2y_bps') or ''}</td>"
+        f"<td>{r.get('sectors_down') or ''}</td>"
+        f"<td>{'✗ failed' if r.get('failed_rally') == 'True' else ('✓ reversal' if r.get('reversal_up') == 'True' else '')}</td>"
         f"<td>{r.get('bottom_score') or ''}</td></tr>"
         for r in reversed(history[-30:]))
 
@@ -522,7 +618,7 @@ h1 {{ margin:0 0 4px; font-size:26px }} .sub {{ color:var(--muted); margin:0 0 2
 table.kv {{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }}
 table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:last-child {{ text-align:right }}
 .up {{ color:var(--bad) }} .down {{ color:var(--good) }}
-.breadth .up {{ color:var(--good) }}
+.breadth .up {{ color:var(--good) }} .breadth .down {{ color:var(--bad) }}
 .spark {{ width:100%; height:110px; margin-top:12px; display:block }}
 .ln {{ fill:none; stroke:var(--accent); stroke-width:2; vector-effect:non-scaling-stroke }}
 .dot {{ fill:var(--accent) }} .ref {{ stroke:var(--muted); stroke-dasharray:4 4; vector-effect:non-scaling-stroke }}
@@ -581,6 +677,7 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
       <tr><td>90% up days (last 60)</td><td>{len(br['up90_days'])} — {fmt_days(br['up90_days'])}</td></tr>
       <tr><td>Stocks above 50-day average</td><td>{br['pct_above50']:.0f}% (20-day low {br['above50_min20']:.0f}%)</td></tr>
       <tr><td>90% down days (last 60)</td><td>{len(br['down90_days'])} — {fmt_days(br['down90_days'])}</td></tr>
+      <tr><td>Since last 90% down day</td><td>{(str(br['sessions_since_down90']) + ' sessions') if br['last_down90'] is not None else '–'}</td></tr>
     </table>
     {sparkline(br['series'], line=BREADTH_THRUST, bars=True, fmt="{:.0f}%")}
     <div class="cap">% of stocks up each day, last 60 sessions · green = 90%+ up, red = 90%+ down</div>
@@ -599,6 +696,21 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
     </table>
     {sparkline(hy['series'], fmt="{:.0f}")}
     <div class="cap">Last ~6 months · rising line = spreads widening (more stress)</div>
+  </section>
+
+  <section class="card breadth">
+    <h2>Selling pressure · sectors &amp; rallies</h2>
+    <div class="big">{pr['n_down']}/11<small>sectors down · {pr['date']:%b %d}</small></div>
+    {badge(pr['alert'])}
+    <table class="kv">
+      <tr><td>Best sector</td><td>{pr['best'][0]} {signed(pr['best'][1], '%', 1)}</td></tr>
+      <tr><td>Worst sector</td><td>{pr['worst'][0]} {signed(pr['worst'][1], '%', 1)}</td></tr>
+      <tr><td>Days with 10+ sectors down (last 10)</td><td>{pr['broad_down_days_10']}</td></tr>
+      {idx_rows}
+      <tr><td>Failed rallies (last 20)</td><td>{len(pr['failed_days'])} — {fmt_days(pr['failed_days'])}</td></tr>
+      <tr><td>Reversals up (last 20)</td><td>{len(pr['reversal_days'])} — {fmt_days(pr['reversal_days'])}</td></tr>
+    </table>
+    <div class="cap">At the 10am run, "close" means the price so far today.</div>
   </section>
 
   <section class="card">
@@ -635,7 +747,7 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 <section class="card hist">
   <h2>Daily log</h2>
   <table><thead><tr><th>Date</th><th>VIX</th><th>VIX 1d</th><th>Fast drop &lt;25</th>
-  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th><th>DXY</th><th>Curve</th><th>Score</th></tr></thead>
+  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th><th>DXY</th><th>Curve</th><th>Sectors down</th><th>Rally</th><th>Score</th></tr></thead>
   <tbody>{hist_rows}</tbody></table>
 </section>
 
@@ -650,6 +762,9 @@ Volatile = 20-day swing size in the top {100 - HY_VOLATILE_PCTILE}% of the past 
 Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
 <b>VIX term structure:</b> VIX divided by the 3-month VIX; above 1 means short-term fear exceeds longer-term fear (panic), and a move back below 1 often comes near bottoms.
 <b>Stocks above 50-day average:</b> under {WASHOUT_PCT}% is a washout; the checklist turns on when it's above 50%, or 10+ points up from a washout low.
+<b>Sectors:</b> the 11 Select Sector SPDR funds (XLK, XLF, …). 10+ falling together = broad selling; 10+ rising = broad buying.
+<b>Failed rally:</b> Nasdaq or S&amp;P 500 up {RALLY_PCT:.0f}%+ at its high but closing lower than the prior day. <b>Reversal up:</b> down {RALLY_PCT:.0f}%+ at its low but closing higher.
+<b>Strongest 90% signal:</b> a 90% up day within about 10 sessions of a 90% down day (Lowry's research).
 <b>Dollar:</b> ICE US Dollar Index. Reversing = made a 60-day high in the last 20 sessions, now {DXY_REVERSAL_PCT}%+ below it and under its 20-day average.
 <b>Yield curve:</b> 10-year minus 2-year Treasury yield from FRED (one business day behind). Flattening/steepening = {CURVE_MOVE_BPS}+ bps move in 20 days; rates stable = 10-year moved less than {RATES_STABLE_BPS} bps in 20 days.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
@@ -668,10 +783,12 @@ def main():
     print("Fetching dollar and Treasury yields…")
     dx = analyze_dollar()
     rt = analyze_rates()
-    checks = checklist(vix, br, hy, dx, rt)
-    history = append_history(vix, br, hy, dx, rt, checks)
+    print("Fetching sectors and index ranges…")
+    pr = analyze_pressure()
+    checks = checklist(vix, br, hy, dx, rt, pr)
+    history = append_history(vix, br, hy, dx, rt, pr, checks)
     with open(REPORT, "w") as f:
-        f.write(render(vix, br, hy, dx, rt, checks, history))
+        f.write(render(vix, br, hy, dx, rt, pr, checks, history))
 
     d1 = vix["d1"]
     print(f"\nVIX  {vix['last']:.2f} ({d1[0]:+.2f}, {d1[1]:+.1f}%)  -> {vix['alert'][0]}")
@@ -679,6 +796,7 @@ def main():
     print(f"HY OAS {hy['last']:.0f} bps ({hy['c1']:+.0f} 1d, {hy['c20']:+.0f} 20d)  -> {hy['alert'][0]}")
     print(f"Dollar {dx['last']:.2f} ({dx['c1']:+.2f}%)  -> {dx['alert'][0]}")
     print(f"Curve {rt['curve']:+.0f} bps ({rt['c20']:+.0f} 20d), 10y {rt['y10']:.2f}%  -> {rt['alert'][0]}")
+    print(f"Pressure {pr['n_down']}/11 sectors down  -> {pr['alert'][0]}")
     print(f"Bottom checklist: {sum(ok for _, ok, _ in checks)}/{len(checks)}")
     for name, ok, detail in checks:
         print(f"  [{'x' if ok else ' '}] {name}: {detail}")
