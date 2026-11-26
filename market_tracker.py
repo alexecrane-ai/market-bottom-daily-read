@@ -9,12 +9,15 @@ Daily Market Tracker
 5. Rates    - 10y-2y yield curve (flattening = stress) and whether 10y yields are stabilizing.
 6. Pressure - how many of the 11 S&P sectors fell, and failed rallies / reversals up
              in the Nasdaq and S&P 500.
-Plus a "bottom checklist" that counts how many signals point to a bottom.
+7. Correlation - Cboe 1-month implied correlation (COR1M): are stocks moving in lockstep?
+Plus a "bottom checklist" that counts how many signals point to a bottom, and an
+"entry tranches" panel showing which of three staged-entry triggers are met.
 
 Writes:  report.html   (open in any browser)
          history.csv   (one row per trading day, appended each run)
 
-Data: Yahoo Finance (VIX + S&P 500 member prices), FRED (high-yield spread).
+Data: Yahoo Finance (VIX + S&P 500 member prices), FRED (high-yield spread),
+      Cboe (COR1M history).
 Needs only Python 3 + pandas. Run:  python3 market_tracker.py
 """
 import csv
@@ -72,6 +75,27 @@ CURVE_MOVE_BPS = 10        # 10y-2y change over 20 days that counts as flattenin
 RATES_STABLE_BPS = 25      # 10y yield moving less than this over 20 days = stabilizing
 RALLY_PCT = 1.0            # intraday move vs prior close that counts as a big rally/drop
 WASHOUT_PCT = 20           # under this % of stocks above their 50-day average = washed out
+CORR_HIGH_PCTILE = 80      # implied correlation at/above this 1y percentile = lockstep selling
+CORR_LOW_PCTILE = 30       # at/below this 1y percentile = stocks moving on their own
+CORR_WINDOW = 20           # days for the computed sector-correlation fallback
+CORR_TREND_DAYS = 5        # days to judge "correlation falling while prices rise"
+
+# ---- Entry tranche triggers (staged entry plan) -------------------------------
+# Tranche 1, capitulation: TRANCHE1_MIN_OF_3 of (VIX/VIX3M < TS_CALM_RATIO, HY OAS 5-day
+#   change <= 0, a reversal-up day in the last REVERSAL_LOOKBACK sessions), OR SPY at
+#   least TRANCHE1_SPY_OFF_HIGH_PCT below its 1-year closing high.
+# Tranche 2, thrust: a 90% up day or VIX fast drop below 25 (last 10 sessions) with the
+#   checklist at TRANCHE2_MIN_SCORE+, OR SPY at least TRANCHE2_SPY_OFF_HIGH_PCT below its high.
+# Tranche 3, confirmation: more than TRANCHE3_ABOVE50_PCT% of stocks above their 50-day
+#   average, junk spreads CALM or NORMAL, dollar reversing, checklist at TRANCHE3_MIN_SCORE+.
+TS_CALM_RATIO = 1.0
+TRANCHE1_MIN_OF_3 = 2
+REVERSAL_LOOKBACK = 5
+TRANCHE1_SPY_OFF_HIGH_PCT = 15.0
+TRANCHE2_MIN_SCORE = 4
+TRANCHE2_SPY_OFF_HIGH_PCT = 20.0
+TRANCHE3_ABOVE50_PCT = 50.0
+TRANCHE3_MIN_SCORE = 6
 
 
 # ---- Data fetching -----------------------------------------------------------
@@ -437,12 +461,88 @@ def analyze_pressure():
         status = ("MIXED", "neutral", f"{n_up} sectors up, {n_down} down.")
 
     recent_buying = bool(reversal_days & set(rets.index[-5:])) or bool((n_up_series.iloc[-5:] >= 10).any())
+    reversal_recent = sorted(reversal_days & set(rets.index[-REVERSAL_LOOKBACK:]))
     return {"date": rets.index[-1], "n_down": n_down, "n_up": n_up,
             "best": (SECTORS[best], today[best]), "worst": (SECTORS[worst], today[worst]),
             "broad_down_days_10": int((n_down_series.iloc[-10:] >= 10).sum()),
             "idx": days, "failed_today": failed_today, "reversal_today": reversal_today,
             "failed_days": sorted(failed_days), "reversal_days": sorted(reversal_days),
-            "recent_buying": recent_buying, "alert": status}
+            "recent_buying": recent_buying, "reversal_recent": reversal_recent, "alert": status}
+
+
+# ---- 7. Stock correlation ------------------------------------------------------
+CBOE_COR1M = "https://cdn.cboe.com/api/global/us_indices/daily_prices/COR1M_History.csv"
+
+
+def analyze_spy():
+    df = yahoo_daily("SPY", "1y")
+    s = df["close"]
+    hi, hi_date = s.max(), s.idxmax()
+    return {"date": s.index[-1], "last": s.iloc[-1], "hi": hi, "hi_date": hi_date,
+            "off_high": (s.iloc[-1] / hi - 1) * 100,
+            "c5": (s.iloc[-1] / s.iloc[-1 - CORR_TREND_DAYS] - 1) * 100, "series": s}
+
+
+def cor1m_series():
+    """Cboe's daily COR1M history, topped up with Yahoo's live quote when it is newer."""
+    df = pd.read_csv(io.StringIO(http_get(CBOE_COR1M)))
+    s = pd.Series(pd.to_numeric(df["CLOSE"], errors="coerce").values,
+                  index=pd.to_datetime(df["DATE"], format="%m/%d/%Y")).dropna()
+    try:
+        live = yahoo_daily("^COR1M", "5d")["close"]
+        newer = live[live.index > s.index[-1]]
+        if len(newer):
+            s = pd.concat([s, newer])
+    except Exception:
+        pass
+    return s[s.index >= s.index[-1] - pd.Timedelta(days=400)]
+
+
+def sector_corr_series():
+    """Fallback: average 20-day pairwise correlation of the 11 sector SPDRs, scaled 0-100."""
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        sec = dict(zip(SECTORS, ex.map(lambda t: yahoo_daily(t, "2y")["close"], SECTORS)))
+    rets = pd.DataFrame(sec).pct_change(fill_method=None).dropna()
+    n = rets.shape[1]
+    vals = {}
+    for i in range(CORR_WINDOW, len(rets) + 1):
+        m = rets.iloc[i - CORR_WINDOW:i].corr().values
+        vals[rets.index[i - 1]] = (m.sum() - n) / (n * (n - 1)) * 100
+    s = pd.Series(vals)
+    return s[s.index >= s.index[-1] - pd.Timedelta(days=400)]
+
+
+def analyze_correlation(spy):
+    try:
+        s = cor1m_series()
+        source, implied = "Cboe COR1M (1-month implied correlation)", True
+    except Exception:
+        s = sector_corr_series()
+        source, implied = f"Computed: average {CORR_WINDOW}-day correlation of the 11 sector SPDRs", False
+
+    last = s.iloc[-1]
+    yr = s.iloc[-252:]
+    pctile = (yr <= last).mean() * 100
+    c5 = last - s.iloc[-1 - CORR_TREND_DAYS]
+    falling_as_prices_rise = c5 < 0 and spy["c5"] > 0
+
+    if falling_as_prices_rise:
+        status = ("FALLING AS PRICES RISE", "good",
+                  f"Correlation down {abs(c5):.1f} pts in {CORR_TREND_DAYS} days while SPY rose "
+                  f"{spy['c5']:.1f}%: stocks are trading on their own merits again, a typical bottoming sign.")
+    elif pctile >= CORR_HIGH_PCTILE:
+        status = ("HIGH", "bad",
+                  f"Stocks are moving in lockstep, higher than {pctile:.0f}% of the past year: "
+                  "indiscriminate selling.")
+    elif pctile <= CORR_LOW_PCTILE:
+        status = ("LOW", "neutral", "Stocks are moving independently; no sign of panic selling.")
+    else:
+        status = ("NORMAL", "neutral", "Stocks are neither in lockstep nor unusually independent.")
+
+    return {"date": s.index[-1], "last": last, "pctile": pctile, "c5": c5,
+            "c20": last - s.iloc[-21], "yr_low": yr.min(), "yr_high": yr.max(),
+            "source": source, "implied": implied, "falling_as_prices_rise": falling_as_prices_rise,
+            "alert": status, "series": s.iloc[-120:]}
 
 
 # ---- Bottom checklist ----------------------------------------------------------
@@ -492,8 +592,64 @@ def checklist(vix, br, hy, dx, rt, pr):
     return items
 
 
+# ---- Entry tranches --------------------------------------------------------------
+def entry_tranches(vix, br, hy, dx, pr, spy, checks):
+    """Each tranche: (name, short rule, met, [(condition, ok, reading), ...])."""
+    score, n = sum(ok for _, ok, _ in checks), len(checks)
+    off = spy["off_high"]
+    spy_txt = f"{off:+.1f}% vs {spy['hi']:.2f} high ({spy['hi_date']:%b %d})"
+    ts = vix["ts_ratio"]
+
+    # Tranche 1 · capitulation
+    rev = pr["reversal_recent"]
+    t1 = [(f"VIX ÷ 3-month VIX below {TS_CALM_RATIO:.1f}", ts is not None and ts < TS_CALM_RATIO,
+           f"{ts:.2f}" if ts is not None else "No data"),
+          ("Junk spreads flat or narrower over 5 days", hy["c5"] <= 0, f"{hy['c5']:+.0f} bps in 5 days"),
+          (f"Reversal-up day (last {REVERSAL_LOOKBACK} sessions)", bool(rev),
+           ", ".join(f"{d:%b %d}" for d in rev) if rev else "None")]
+    hits = sum(ok for _, ok, _ in t1)
+    t1_back = off <= -TRANCHE1_SPY_OFF_HIGH_PCT
+    t1.append((f"Or: SPY {TRANCHE1_SPY_OFF_HIGH_PCT:.0f}%+ below its 1-year high", t1_back, spy_txt))
+    t1_met = hits >= TRANCHE1_MIN_OF_3 or t1_back
+
+    # Tranche 2 · thrust
+    fd = vix["recent_fast_drops"]
+    thrust = br["up90_last10"] or bool(fd)
+    if br["up90_last10"]:
+        thrust_txt = "90% up day in last 10 sessions"
+    elif fd:
+        thrust_txt = f"VIX fast drop below 25 on {fd[-1]:%b %d}" + (
+            f", now back above ({vix['last']:.1f})" if vix["last"] >= VIX_LINE else "")
+    else:
+        thrust_txt = f"Neither yet ({br['pct_up']:.0f}% up today, VIX {vix['last']:.1f})"
+    t2_back = off <= -TRANCHE2_SPY_OFF_HIGH_PCT
+    t2 = [("A 90% up day or VIX fast drop below 25 (last 10 sessions)", thrust, thrust_txt),
+          (f"Bottom checklist {TRANCHE2_MIN_SCORE}/8 or higher", score >= TRANCHE2_MIN_SCORE, f"{score}/{n}"),
+          (f"Or: SPY {TRANCHE2_SPY_OFF_HIGH_PCT:.0f}%+ below its 1-year high", t2_back, spy_txt)]
+    t2_met = (thrust and score >= TRANCHE2_MIN_SCORE) or t2_back
+
+    # Tranche 3 · confirmation
+    t3 = [(f"More than {TRANCHE3_ABOVE50_PCT:.0f}% of stocks above 50-day average",
+           br["pct_above50"] > TRANCHE3_ABOVE50_PCT, f"{br['pct_above50']:.0f}%"),
+          ("Junk spreads Calm or Normal", hy["alert"][0] in ("CALM", "NORMAL"), hy["alert"][0].title()),
+          ("Dollar reversing lower", dx["ok"], dx["alert"][0].title()),
+          (f"Bottom checklist {TRANCHE3_MIN_SCORE}/8 or higher", score >= TRANCHE3_MIN_SCORE, f"{score}/{n}")]
+    t3_met = all(ok for _, ok, _ in t3)
+
+    return [
+        ("Tranche 1 · Capitulation",
+         f"{TRANCHE1_MIN_OF_3} of the first 3, or SPY {TRANCHE1_SPY_OFF_HIGH_PCT:.0f}% off its high. "
+         "Panic is peaking and starting to ease.", t1_met, t1),
+        ("Tranche 2 · Thrust",
+         f"A buying thrust with the checklist at {TRANCHE2_MIN_SCORE}+, or SPY "
+         f"{TRANCHE2_SPY_OFF_HIGH_PCT:.0f}% off its high. Buyers are coming back in force.", t2_met, t2),
+        ("Tranche 3 · Confirmation",
+         "All four. The recovery is broad and the backdrop has calmed.", t3_met, t3),
+    ]
+
+
 # ---- History log -------------------------------------------------------------
-def append_history(vix, br, hy, dx, rt, pr, checks):
+def append_history(vix, br, hy, dx, rt, pr, checks, cor, spy, tr):
     row = {
         "run_date": datetime.now().strftime("%Y-%m-%d"),
         "vix_date": f"{vix['date']:%Y-%m-%d}",
@@ -527,6 +683,14 @@ def append_history(vix, br, hy, dx, rt, pr, checks):
         "failed_rally": pr["failed_today"],
         "reversal_up": pr["reversal_today"],
         "bottom_score": f"{sum(ok for _, ok, _ in checks)}/{len(checks)}",
+        "corr_date": f"{cor['date']:%Y-%m-%d}",
+        "corr": round(cor["last"], 2),
+        "corr_pctile_1y": round(cor["pctile"]),
+        "corr_source": "COR1M" if cor["implied"] else "sector_20d",
+        "spy_off_1y_high_pct": round(spy["off_high"], 1),
+        "tranche1_capitulation_met": tr[0][2],
+        "tranche2_thrust_met": tr[1][2],
+        "tranche3_confirmation_met": tr[2][2],
     }
     rows = []
     if os.path.exists(HISTORY):
@@ -582,7 +746,7 @@ def badge(alert):
     return f'<div class="badge {tone}">{label}</div><p class="why">{text}</p>'
 
 
-def render(vix, br, hy, dx, rt, pr, checks, history):
+def render(vix, br, hy, dx, rt, pr, checks, history, cor, spy, tr):
     d1, d5, d20 = vix["d1"], vix["d5"], vix["d20"]
     cross = f"{vix['cross_date']:%b %d, %Y}" if vix["cross_date"] is not None else "–"
     fmt_days = lambda ds: ", ".join(f"{d:%b %d}" for d in ds[-8:]) or "none"
@@ -595,6 +759,19 @@ def render(vix, br, hy, dx, rt, pr, checks, history):
         f'<li class="{"on" if ok else "off"}"><span class="mark">{"✓" if ok else "✗"}</span>'
         f'<span class="cname">{name}</span><span class="cdet">{detail}</span></li>'
         for name, ok, detail in checks)
+    tranche_cards = "".join(
+        f'<div class="tranche {"met" if met else ""}"><h3>{name}</h3>'
+        f'<div class="badge {"good" if met else "neutral"}">{"MET" if met else "NOT MET"}</div>'
+        f'<p class="why">{rule}</p><ul>' + "".join(
+            f'<li class="{"on" if ok else "off"}"><span class="mark">{"✓" if ok else "✗"}</span>'
+            f'<span class="cname">{c}</span><span class="cdet">{d}</span></li>' for c, ok, d in conds)
+        + '</ul></div>'
+        for name, rule, met, conds in tr)
+    n_met = sum(met for _, _, met, _ in tr)
+    tmark = lambda r: " ".join(
+        str(i) if r.get(k) == "True" else "–" for i, k in enumerate(
+            ("tranche1_capitulation_met", "tranche2_thrust_met", "tranche3_confirmation_met"), 1)
+    ) if r.get("tranche1_capitulation_met") else ""
     ts = (f"{vix['ts_ratio']:.2f} " + ("(panic: above 1)" if vix["ts_ratio"] >= 1 else "(normal: below 1)")
           if vix["ts_ratio"] is not None else "–")
 
@@ -607,7 +784,7 @@ def render(vix, br, hy, dx, rt, pr, checks, history):
         f"<td>{r.get('dxy') or ''}</td><td>{r.get('curve_10y2y_bps') or ''}</td>"
         f"<td>{r.get('sectors_down') or ''}</td>"
         f"<td>{'✗ failed' if r.get('failed_rally') == 'True' else ('✓ reversal' if r.get('reversal_up') == 'True' else '')}</td>"
-        f"<td>{r.get('bottom_score') or ''}</td></tr>"
+        f"<td>{r.get('bottom_score') or ''}</td><td>{r.get('corr') or ''}</td><td>{tmark(r)}</td></tr>"
         for r in reversed(history[-30:]))
 
     return f"""<!doctype html>
@@ -658,6 +835,17 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 .check .mark {{ font-weight:700; grid-row:span 2 }} .check li.on .mark {{ color:var(--good) }} .check li.off .mark {{ color:var(--bad) }}
 .check .cname {{ font-weight:600 }} .check .cdet {{ color:var(--muted); font-size:13px }}
 .notes {{ color:var(--muted); font-size:13px; margin-top:20px }}
+.tranches {{ margin-bottom:16px }}
+.tranches .tsub {{ color:var(--muted); margin:6px 0 12px }}
+.tgrid {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px }}
+.tranche {{ border:1px solid var(--line); border-radius:12px; padding:14px 16px }}
+.tranche.met {{ border-color:var(--good) }}
+.tranche h3 {{ margin:0; font-size:16px }}
+.tranche .why {{ margin:8px 0 6px; font-size:13px }}
+.tranche ul {{ list-style:none; margin:0; padding:0 }}
+.tranche li {{ display:grid; grid-template-columns:18px 1fr; column-gap:8px; padding:7px 0; border-top:1px solid var(--line) }}
+.tranche .mark {{ font-weight:700; grid-row:span 2 }} .tranche li.on .mark {{ color:var(--good) }} .tranche li.off .mark {{ color:var(--bad) }}
+.tranche .cname {{ font-weight:600; font-size:14px }} .tranche .cdet {{ color:var(--muted); font-size:13px }}
 </style></head><body><main>
 <h1>Market Bottom Daily Read</h1>
 <p class="sub">Updated {datetime.now():%a %b %d, %Y · %I:%M %p} ET ·
@@ -667,6 +855,13 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
   <h2>Bottom checklist</h2>
   <div class="score">{score} of {len(checks)}<small> signals point to a bottom</small></div>
   <ul>{check_rows}</ul>
+</section>
+
+<section class="card tranches">
+  <h2>Entry tranches</h2>
+  <div class="score">{n_met} of 3<small> staged-entry triggers met</small></div>
+  <p class="tsub">Each tranche is checked on its own, every run. ✓ = condition met right now.</p>
+  <div class="tgrid">{tranche_cards}</div>
 </section>
 
 <div class="grid">
@@ -763,12 +958,28 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
     {sparkline(rt['series'], line=0, fmt="{:.0f}")}
     <div class="cap">Last ~6 months · dashed line = 0 (inverted below)</div>
   </section>
+
+  <section class="card">
+    <h2>Stock correlation · {"COR1M" if cor['implied'] else "sector average"}</h2>
+    <div class="big">{cor['last']:.1f}<small>{cor['pctile']:.0f}th pctile (1y) · {cor['date']:%b %d}</small></div>
+    {badge(cor['alert'])}
+    <table class="kv">
+      <tr><td>{CORR_TREND_DAYS}-day change</td><td>{signed(cor['c5'], ' pts', 1)}</td></tr>
+      <tr><td>20-day change</td><td>{signed(cor['c20'], ' pts', 1)}</td></tr>
+      <tr><td>1-year range</td><td>{cor['yr_low']:.1f} – {cor['yr_high']:.1f}</td></tr>
+      <tr><td>SPY {CORR_TREND_DAYS}-day change</td><td><span class="{'down' if spy['c5'] > 0 else 'up'}">{spy['c5']:+.1f}%</span></td></tr>
+      <tr><td>SPY vs 1-year high</td><td>{spy['off_high']:+.1f}% ({spy['hi']:.2f}, {spy['hi_date']:%b %d})</td></tr>
+    </table>
+    {sparkline(cor['series'], fmt="{:.0f}")}
+    <div class="cap">Last ~6 months · high = stocks moving together (indiscriminate selling).
+    Correlation falling while prices rise is a typical bottoming sign.</div>
+  </section>
 </div>
 
 <section class="card hist">
   <h2>Daily log</h2>
   <table><thead><tr><th>Date</th><th>VIX</th><th>VIX 1d</th><th>Fast drop &lt;25</th>
-  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th><th>DXY</th><th>Curve</th><th>Sectors down</th><th>Rally</th><th>Score</th></tr></thead>
+  <th>% stocks up</th><th>90% day</th><th>HY OAS</th><th>HY status</th><th>DXY</th><th>Curve</th><th>Sectors down</th><th>Rally</th><th>Score</th><th>Corr</th><th>Tranches</th></tr></thead>
   <tbody>{hist_rows}</tbody></table>
 </section>
 
@@ -788,6 +999,15 @@ Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
 <b>Strongest 90% signal:</b> a 90% up day within about 10 sessions of a 90% down day (Lowry's research).
 <b>Dollar:</b> ICE US Dollar Index. Reversing = made a 60-day high in the last 20 sessions, now {DXY_REVERSAL_PCT}%+ below it and under its 20-day average.
 <b>Yield curve:</b> 10-year minus 2-year Treasury yield from FRED (one business day behind). Flattening/steepening = {CURVE_MOVE_BPS}+ bps move in 20 days; rates stable = 10-year moved less than {RATES_STABLE_BPS} bps in 20 days.
+<b>Stock correlation:</b> {cor['source']}. It measures how much S&amp;P 500 stocks are expected to move together over the next month (0–100).
+High (top {100 - CORR_HIGH_PCTILE}% of the past year) means indiscriminate selling: everything is sold regardless of quality.
+Correlation falling over {CORR_TREND_DAYS} days while SPY rises means stocks are trading on their own merits again, which typically happens near bottoms.
+If Cboe's data is unavailable, the tracker falls back to the average {CORR_WINDOW}-day pairwise correlation of the 11 sector SPDRs.
+<b>Entry tranches:</b> three staged-entry triggers, each checked independently on every run.
+Tranche 1 (capitulation): {TRANCHE1_MIN_OF_3} of VIX ÷ 3-month VIX below {TS_CALM_RATIO:.1f}, junk spreads flat or narrower over 5 days, and a reversal-up day in the last {REVERSAL_LOOKBACK} sessions; or SPY {TRANCHE1_SPY_OFF_HIGH_PCT:.0f}%+ below its 1-year closing high.
+Tranche 2 (thrust): a 90% up day or VIX fast drop below 25 in the last 10 sessions with the checklist at {TRANCHE2_MIN_SCORE}+; or SPY {TRANCHE2_SPY_OFF_HIGH_PCT:.0f}%+ below its 1-year high.
+Tranche 3 (confirmation): more than {TRANCHE3_ABOVE50_PCT:.0f}% of stocks above their 50-day average, junk spreads Calm or Normal, the dollar Reversing or Falling, and the checklist at {TRANCHE3_MIN_SCORE}+.
+In the log, "1 2 –" means tranches 1 and 2 were met that day.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
@@ -806,10 +1026,14 @@ def main():
     rt = analyze_rates()
     print("Fetching sectors and index ranges…")
     pr = analyze_pressure()
+    print("Fetching SPY and stock correlation…")
+    spy = analyze_spy()
+    cor = analyze_correlation(spy)
     checks = checklist(vix, br, hy, dx, rt, pr)
-    history = append_history(vix, br, hy, dx, rt, pr, checks)
+    tr = entry_tranches(vix, br, hy, dx, pr, spy, checks)
+    history = append_history(vix, br, hy, dx, rt, pr, checks, cor, spy, tr)
     with open(REPORT, "w") as f:
-        f.write(render(vix, br, hy, dx, rt, pr, checks, history))
+        f.write(render(vix, br, hy, dx, rt, pr, checks, history, cor, spy, tr))
     with open(os.path.join(HERE, "stamp.txt"), "w") as f:
         f.write(STAMP)
 
@@ -823,6 +1047,13 @@ def main():
     print(f"Bottom checklist: {sum(ok for _, ok, _ in checks)}/{len(checks)}")
     for name, ok, detail in checks:
         print(f"  [{'x' if ok else ' '}] {name}: {detail}")
+    print(f"Correlation {cor['last']:.1f} ({cor['pctile']:.0f}th pctile, {cor['c5']:+.1f} 5d) "
+          f"[{'COR1M' if cor['implied'] else 'sector fallback'}]  -> {cor['alert'][0]}")
+    print(f"SPY {spy['off_high']:+.1f}% vs 1-year high")
+    for name, _, met, conds in tr:
+        print(f"{name}: {'MET' if met else 'not met'}")
+        for c, ok, d in conds:
+            print(f"  [{'x' if ok else ' '}] {c}: {d}")
     print(f"\nReport: {REPORT}")
 
 
