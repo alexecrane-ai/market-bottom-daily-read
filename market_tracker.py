@@ -75,6 +75,7 @@ WASHOUT_PCT = 20           # under this % of stocks above their 50-day average =
 TREND_FAST, TREND_SLOW = 20, 50   # EMAs that set the trend signal
 RANGE_EMA = 10             # trade range is centred on this EMA ...
 RANGE_ATR_MULT = 1.5       # ... plus/minus this many average daily ranges (ATR 14)
+RANGE_NEAR = 0.25          # within this share of the range from an end = "near" that level
 
 
 # ---- Data fetching -----------------------------------------------------------
@@ -658,13 +659,55 @@ def money(v):
     return f"${v:,.2f}"
 
 
+# What to make of a price near each end of its range, by trend state.
+TREND_STATES = [  # key, label, dot, meaning
+    ("bull", "Bullish ↑", "🟢", "Favorable upside conditions"),
+    ("nup", "Neutral ↑", "🟡", "Improving conditions; upside potential increasing"),
+    ("ndn", "Neutral ↓", "🟠", "Weakening conditions; downside risk increasing"),
+    ("bear", "Bearish ↓", "🔴", "Unfavorable conditions; downside risk elevated"),
+]
+NEAR_BUY = {"bull": "Potential buying opportunity", "nup": "Watch for support",
+            "ndn": "Caution buying dips", "bear": "New exposure generally unfavorable"}
+NEAR_SELL = {"bull": "Potential profit-taking opportunity", "nup": "Watch for upside continuation",
+             "ndn": "Reduced or no exposure favored", "bear": "Potential selling or shorting opportunity"}
+
+
+def state_key(r):
+    if r["signal"] == "Bullish":
+        return "bull"
+    if r["signal"] == "Bearish":
+        return "bear"
+    return "nup" if r["rising"] else "ndn"
+
+
+def range_read(r):
+    pos = (r["price"] - r["buy"]) / (r["sell"] - r["buy"])
+    k = state_key(r)
+    if pos <= RANGE_NEAR:
+        return "Near buy: " + NEAR_BUY[k]
+    if pos >= 1 - RANGE_NEAR:
+        return "Near sell: " + NEAR_SELL[k]
+    return "Mid-range"
+
+
+def trend_legend():
+    li = lambda text: "".join(f'<li><span class="pill {k}">{dot} {lbl}</span> {text[k]}</li>'
+                              for k, lbl, dot, _ in TREND_STATES)
+    states = li({k: m for k, _, _, m in TREND_STATES})
+    return (f'<div class="legend"><div><h3>How to read the trend signal</h3><ul>{states}</ul></div>'
+            f'<div><h3>Near the buy level (low end of range)</h3><ul>{li(NEAR_BUY)}</ul></div>'
+            f'<div><h3>Near the sell level (top end of range)</h3><ul>{li(NEAR_SELL)}</ul></div></div>'
+            f'<p class="why">The trading range marks likely turning levels; the trend signal says how to read a test of either end. '
+            f'They are reference levels, not guaranteed turning points. Short selling carries extra risk, including unlimited losses.</p>')
+
+
 def trend_table(tr):
     if not tr["date"]:
         return '<section class="card trend"><h2>Trend ranges</h2><p class="why">No price data this run.</p></section>'
     head = ('<tr class="thead"><th>Symbol</th><th class="nm">{title}</th><th>Current price</th>'
             '<th class="buyh">Buy level</th><th class="sellh">Sell level</th><th>Upside</th>'
             '<th>Downside</th><th class="sigh">Trend signal</th><th>Signal date</th>'
-            '<th>Signal price</th><th>Signal perf</th><th>Days</th></tr>')
+            '<th>Signal price</th><th>Signal perf</th><th>Days</th><th class="rd">Read</th></tr>')
     body = []
     for title, rows in tr["groups"]:
         body.append(head.format(title=title))
@@ -672,19 +715,22 @@ def trend_table(tr):
             sig = r["signal"]
             arrow = "↑" if (sig == "Bullish" or (sig == "Neutral" and r["rising"])) else "↓"
             perf_cls = "pg" if r["sig_perf"] > 0 else "pb"
+            read = range_read(r)
+            rcls = "mid" if read == "Mid-range" else state_key(r)
             date = ("before " if r["sig_old"] else "") + f"{r['sig_date']:%-m/%-d/%Y}"
             body.append(
                 f'<tr><td class="sym">{r["sym"]}</td><td class="nm">{r["name"]}</td>'
                 f'<td>{money(r["price"])}</td><td class="buy">{money(r["buy"])}</td>'
                 f'<td class="sell">{money(r["sell"])}</td>'
                 f'<td class="gtxt">{r["upside"]:.2f}%</td><td class="rtxt">{r["downside"]:.2f}%</td>'
-                f'<td class="sig {sig.lower()}">{sig} {arrow}</td><td>{date}</td>'
+                f'<td class="sig {state_key(r)}">{sig} {arrow}</td><td>{date}</td>'
                 f'<td>{money(r["sig_price"])}</td><td class="{perf_cls}">{r["sig_perf"]:.2f}%</td>'
-                f'<td>{r["days"]}</td></tr>')
+                f'<td>{r["days"]}</td><td class="rd {rcls}">{read}</td></tr>')
     return (f'<section class="card trend"><h2>Trend ranges · buy/sell levels &amp; trend signals</h2>'
             f'<p class="why">Prices as of {tr["date"]:%b %d}. Buy and sell levels are a short-term trading range; '
             f'the trend signal is the bigger picture. Sorted by how long each trend has run.</p>'
-            f'<div class="tscroll"><table class="tt"><tbody>{"".join(body)}</tbody></table></div></section>')
+            f'<div class="tscroll"><table class="tt"><tbody>{"".join(body)}</tbody></table></div>'
+            f'{trend_legend()}</section>')
 
 
 def render(vix, br, hy, dx, rt, pr, checks, history, tr):
@@ -723,11 +769,11 @@ def render(vix, br, hy, dx, rt, pr, checks, history, tr):
 <style>
 :root {{ --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#667085; --line:#e4e7ec;
   --good:#0f8a5f; --good-bg:#e3f6ee; --bad:#c2352b; --bad-bg:#fbe9e7;
-  --neu:#475467; --neu-bg:#eef1f5; --accent:#3559e0; --hdr:#1d2b3a; --warn:#8a6100; --warn-bg:#fdf3d0; }}
+  --neu:#475467; --neu-bg:#eef1f5; --accent:#3559e0; --hdr:#1d2b3a; --warn:#8a6100; --warn-bg:#fdf3d0; --orange:#b2470b; --orange-bg:#fde6d6; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --bg:#0f1115; --card:#181b21; --ink:#e8eaee;
   --muted:#98a2b3; --line:#2a2f38; --good:#3ecf8e; --good-bg:#12302a; --bad:#ff6b5e;
   --bad-bg:#3a1a18; --neu:#c0c7d2; --neu-bg:#232832; --accent:#7c9bff; --hdr:#26354a;
-  --warn:#f5c542; --warn-bg:#3a3014; }} }}
+  --warn:#f5c542; --warn-bg:#3a3014; --orange:#ff9a52; --orange-bg:#3a2214; }} }}
 * {{ box-sizing:border-box }}
 body {{ margin:0; background:var(--bg); color:var(--ink);
   font:15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
@@ -776,8 +822,14 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 .tt .buy {{ background:var(--good-bg); color:var(--ink); font-weight:700 }}
 .tt .sell {{ background:var(--bad-bg); color:var(--ink); font-weight:700 }}
 .tt .gtxt {{ color:var(--good) }} .tt .rtxt {{ color:var(--bad) }}
-.tt .sig {{ font-weight:700 }} .tt .bullish {{ color:var(--good); background:var(--good-bg) }}
-.tt .bearish {{ color:var(--bad); background:var(--bad-bg) }} .tt .neutral {{ color:var(--warn); background:var(--warn-bg) }}
+.tt .sig {{ font-weight:700 }}
+.bull {{ color:var(--good); background:var(--good-bg) }} .bear {{ color:var(--bad); background:var(--bad-bg) }}
+.nup {{ color:var(--warn); background:var(--warn-bg) }} .ndn {{ color:var(--orange); background:var(--orange-bg) }}
+.tt td.rd {{ text-align:left; font-size:12px; font-weight:600 }} .tt td.rd.mid {{ color:var(--muted); font-weight:400 }}
+.legend {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:4px 24px; padding:16px 20px 0 }}
+.legend h3 {{ font-size:14px; margin:0 0 6px }} .legend ul {{ list-style:none; margin:0 0 10px; padding:0 }}
+.legend li {{ padding:4px 0; font-size:13px; color:var(--muted) }}
+.pill {{ display:inline-block; font-weight:700; font-size:12px; padding:2px 8px; border-radius:999px; margin-right:4px }}
 .tt .pg {{ color:var(--good); background:var(--good-bg) }} .tt .pb {{ color:var(--bad); background:var(--bad-bg) }}
 </style></head><body><main>
 <h1>Market Bottom Daily Read</h1>
@@ -914,7 +966,8 @@ Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
 <b>Trend ranges:</b> buy level = {RANGE_EMA}-day average minus {RANGE_ATR_MULT}× the average daily range (14-day ATR), sell level = plus the same;
 if the price is already outside that band the level sits just beyond it. Upside/downside = distance from today's price to the sell/buy level.
 Bullish = price above its {TREND_SLOW}-day average and the {TREND_FAST}-day above the {TREND_SLOW}-day; bearish = both below; neutral = mixed
-(↑ when the price is back above the {TREND_SLOW}-day). Signal date/price = the close when the current signal began; days are calendar days.
+(↑ when the price is back above the {TREND_SLOW}-day, yellow; ↓ otherwise, orange).
+Read = near buy/sell when the price is within {RANGE_NEAR:.0%} of the range from that end. Signal date/price = the close when the current signal began; days are calendar days.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
