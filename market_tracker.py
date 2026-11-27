@@ -50,6 +50,7 @@ FRESH_JS = '''<script>
 </script>'''.replace('__STAMP__', STAMP)
 
 import pandas as pd
+import macro_brief
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPORT = os.path.join(HERE, "index.html")
@@ -766,7 +767,7 @@ def trend_table(tr):
             f'{trend_legend()}</section>')
 
 
-def render(vix, br, hy, dx, rt, pr, checks, history, tr):
+def render(vix, br, hy, dx, rt, pr, checks, history, tr, macro):
     d1, d5, d20 = vix["d1"], vix["d5"], vix["d20"]
     cross = f"{vix['cross_date']:%b %d, %Y}" if vix["cross_date"] is not None else "–"
     fmt_days = lambda ds: ", ".join(f"{d:%b %d}" for d in ds[-8:]) or "none"
@@ -843,6 +844,7 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 .check .mark {{ font-weight:700; grid-row:span 2 }} .check li.on .mark {{ color:var(--good) }} .check li.off .mark {{ color:var(--bad) }}
 .check .cname {{ font-weight:600 }} .check .cdet {{ color:var(--muted); font-size:13px }}
 .notes {{ color:var(--muted); font-size:13px; margin-top:20px }}
+{macro_brief.CSS.replace('{{', '{').replace('}}', '}')}
 .trend {{ margin-top:16px; padding:20px 0 12px }} .trend h2, .trend .why {{ padding:0 20px }}
 .tscroll {{ overflow-x:auto; -webkit-overflow-scrolling:touch }}
 .tt {{ width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums }}
@@ -874,6 +876,8 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
   <div class="score">{score} of {len(checks)}<small> signals point to a bottom</small></div>
   <ul>{check_rows}</ul>
 </section>
+
+{macro_brief.render(macro)}
 
 <div class="grid">
   <section class="card">
@@ -1023,9 +1027,11 @@ def main():
     print("Fetching trend-range symbols…")
     tr = analyze_trends()
     checks = checklist(vix, br, hy, dx, rt, pr)
+    print("Building macro brief (official data + news)…")
+    macro = macro_brief.build(fred_series, vix, br, hy, dx, rt, pr, checks, tr)
     history = append_history(vix, br, hy, dx, rt, pr, checks)
     with open(REPORT, "w") as f:
-        f.write(render(vix, br, hy, dx, rt, pr, checks, history, tr))
+        f.write(render(vix, br, hy, dx, rt, pr, checks, history, tr, macro))
     with open(os.path.join(HERE, "stamp.txt"), "w") as f:
         f.write(STAMP)
 
