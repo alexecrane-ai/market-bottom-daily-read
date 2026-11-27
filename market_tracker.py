@@ -50,6 +50,7 @@ FRESH_JS = '''<script>
 </script>'''.replace('__STAMP__', STAMP)
 
 import pandas as pd
+import macro_brief
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPORT = os.path.join(HERE, "index.html")
@@ -72,6 +73,13 @@ CURVE_MOVE_BPS = 10        # 10y-2y change over 20 days that counts as flattenin
 RATES_STABLE_BPS = 25      # 10y yield moving less than this over 20 days = stabilizing
 RALLY_PCT = 1.0            # intraday move vs prior close that counts as a big rally/drop
 WASHOUT_PCT = 20           # under this % of stocks above their 50-day average = washed out
+# Trend ranges, calibrated to a published buy/sell-level sheet (Nov 24, 2026 closes):
+TREND_FAST, TREND_SLOW = 10, 30   # EMA crossover sets bullish/bearish
+RANGE_EMA = 5              # trade range is anchored on this EMA ...
+RANGE_ATR = 10             # ... and scaled by this many days' average daily range (ATR)
+RANGE_BUY_MULT = 1.71      # buy level = EMA - this x ATR
+RANGE_SELL_MULT = 1.04     # sell level = EMA + this x ATR
+RANGE_NEAR = 0.25          # within this share of the range from an end = "near" that level
 
 
 # ---- Data fetching -----------------------------------------------------------
@@ -445,6 +453,103 @@ def analyze_pressure():
             "recent_buying": recent_buying, "alert": status}
 
 
+# ---- 7. Trend ranges: buy/sell levels and trend signals ---------------------------
+TREND_GROUPS = [
+    ("Top Index ETFs", {"IWM": "Russell 2000", "HYG": "High Yield Bonds", "GLD": "Gold",
+                        "UUP": "U.S. Dollar", "FXE": "Euro", "SLV": "Silver", "GDX": "Gold Miners",
+                        "DBA": "Agriculture", "CPER": "Copper", "ETHA": "Ethereum",
+                        "QQQ": "Nasdaq 100", "IBIT": "Bitcoin", "SPY": "S&P 500",
+                        "GSG": "Broad Commodities", "USO": "Oil"}),
+    ("Top Sector ETFs", {"XLV": "Healthcare", "XLI": "Industrials", "XLC": "Communication Services",
+                         "XLP": "Consumer Staples", "XLK": "Technology", "XLU": "Utilities",
+                         "XLRE": "Real Estate", "XLE": "Energy", "XLB": "Materials",
+                         "XLF": "Financials", "XLY": "Consumer Discretionary"}),
+] + [(f"{name} · {etf} stocks", stocks) for etf, name, stocks in [
+    # Largest holdings of each Select Sector SPDR (edit to taste).
+    ("XLK", "Technology", {"NVDA": "Nvidia", "AAPL": "Apple", "MSFT": "Microsoft", "AVGO": "Broadcom",
+                           "ORCL": "Oracle", "AMD": "AMD", "MU": "Micron", "SNDK": "SanDisk"}),
+    ("XLF", "Financials", {"BRK-B": "Berkshire Hathaway", "JPM": "JPMorgan", "V": "Visa",
+                           "MA": "Mastercard", "BAC": "Bank of America", "WFC": "Wells Fargo",
+                           "GS": "Goldman Sachs"}),
+    ("XLV", "Healthcare", {"LLY": "Eli Lilly", "JNJ": "Johnson & Johnson", "ABBV": "AbbVie",
+                           "UNH": "UnitedHealth", "MRK": "Merck", "ABT": "Abbott"}),
+    ("XLI", "Industrials", {"GE": "GE Aerospace", "CAT": "Caterpillar", "RTX": "RTX",
+                            "GEV": "GE Vernova", "UBER": "Uber", "BA": "Boeing", "HON": "Honeywell"}),
+    ("XLC", "Communication Services", {"META": "Meta", "GOOGL": "Alphabet", "NFLX": "Netflix",
+                                       "DIS": "Disney", "TMUS": "T-Mobile", "T": "AT&T"}),
+    ("XLP", "Consumer Staples", {"WMT": "Walmart", "COST": "Costco", "PG": "Procter & Gamble",
+                                 "KO": "Coca-Cola", "PM": "Philip Morris", "PEP": "PepsiCo"}),
+    ("XLU", "Utilities", {"NEE": "NextEra Energy", "SO": "Southern Co", "CEG": "Constellation Energy",
+                          "DUK": "Duke Energy", "VST": "Vistra"}),
+    ("XLRE", "Real Estate", {"WELL": "Welltower", "PLD": "Prologis", "AMT": "American Tower",
+                             "EQIX": "Equinix", "SPG": "Simon Property"}),
+    ("XLE", "Energy", {"XOM": "Exxon Mobil", "CVX": "Chevron", "COP": "ConocoPhillips",
+                       "WMB": "Williams", "EOG": "EOG Resources"}),
+    ("XLB", "Materials", {"LIN": "Linde", "NEM": "Newmont", "SHW": "Sherwin-Williams",
+                          "ECL": "Ecolab", "FCX": "Freeport-McMoRan"}),
+    ("XLY", "Consumer Discretionary", {"AMZN": "Amazon", "TSLA": "Tesla", "HD": "Home Depot",
+                                       "MCD": "McDonald's", "BKNG": "Booking", "TJX": "TJX"}),
+]]
+
+
+def trend_row(sym, name, df):
+    """Trade range, trend state and when that state began, from daily bars."""
+    c = df["close"]
+    hi, lo = df["high"].fillna(c), df["low"].fillna(c)
+    tr = pd.concat([hi - lo, (hi - c.shift()).abs(), (lo - c.shift()).abs()], axis=1).max(axis=1)
+    atr = tr.rolling(RANGE_ATR).mean().iloc[-1]
+    price = float(c.iloc[-1])
+    mid = c.ewm(span=RANGE_EMA, adjust=False).mean().iloc[-1]
+    buy = mid - RANGE_BUY_MULT * atr
+    sell = mid + RANGE_SELL_MULT * atr
+
+    fast = c.ewm(span=TREND_FAST, adjust=False).mean()
+    slow = c.ewm(span=TREND_SLOW, adjust=False).mean()
+    up = fast > slow
+    state = pd.Series("Bearish", index=c.index)
+    state[up] = "Bullish"
+    state[(up & (c < slow)) | (~up & (c > slow))] = "Neutral"   # price crossed back against the trend
+    state, trend = state.iloc[TREND_SLOW * 2:], up.iloc[TREND_SLOW * 2:]   # EMAs need time to settle
+    # A trend signal dates from the crossover; a neutral one from when it turned neutral.
+    run = state if state.iloc[-1] == "Neutral" else trend
+    start = run.index[run.ne(run.shift())][-1]
+    since_start = run.index[0] == start      # no flip in the data we have
+    sig_price = float(c.loc[start])
+    return {"sym": sym.replace("-", "."), "name": name, "price": price, "buy": buy, "sell": sell,
+            "upside": (sell / price - 1) * 100, "downside": (buy / price - 1) * 100,
+            "signal": state.iloc[-1], "rising": not bool(up.iloc[-1]),
+            "sig_date": start, "sig_old": since_start, "sig_price": sig_price,
+            "sig_perf": (price / sig_price - 1) * 100,
+            "days": (c.index[-1] - start).days, "date": c.index[-1],
+            # sessions missing from the last two weeks (Yahoo sometimes drops bars)
+            "gaps": max(0, len(pd.bdate_range(c.index[-1] - pd.Timedelta(days=13), c.index[-1]))
+                        - 1 - int((c.index > c.index[-1] - pd.Timedelta(days=13)).sum()))}
+
+
+def analyze_trends():
+    syms = [(s, n) for _, g in TREND_GROUPS for s, n in g.items()]
+
+    def one(item):
+        try:
+            df = yahoo_daily(item[0], "2y")
+            recent = yahoo_daily(item[0], "1mo")   # long ranges sometimes miss the latest bars
+            df = recent.combine_first(df)
+            return trend_row(item[0], item[1], df)
+        except Exception as e:
+            print(f"  trend {item[0]} failed: {e}")
+            return None
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        rows = dict(zip([s for s, _ in syms], ex.map(one, syms)))
+    out = []
+    for title, g in TREND_GROUPS:
+        got = [rows[s] for s in g if rows.get(s)]
+        got.sort(key=lambda r: r["sig_date"])
+        out.append((title, got))
+    dates = [r["date"] for _, g in out for r in g]
+    return {"groups": out, "date": max(dates) if dates else None}
+
+
 # ---- Bottom checklist ----------------------------------------------------------
 def checklist(vix, br, hy, dx, rt, pr):
     items = []
@@ -582,7 +687,87 @@ def badge(alert):
     return f'<div class="badge {tone}">{label}</div><p class="why">{text}</p>'
 
 
-def render(vix, br, hy, dx, rt, pr, checks, history):
+def money(v):
+    return f"${v:,.2f}"
+
+
+# What to make of a price near each end of its range, by trend state.
+TREND_STATES = [  # key, label, dot, meaning
+    ("bull", "Bullish ↑", "🟢", "Favorable upside conditions"),
+    ("nup", "Neutral ↑", "🟡", "Improving conditions; upside potential increasing"),
+    ("ndn", "Neutral ↓", "🟠", "Weakening conditions; downside risk increasing"),
+    ("bear", "Bearish ↓", "🔴", "Unfavorable conditions; downside risk elevated"),
+]
+NEAR_BUY = {"bull": "Potential buying opportunity", "nup": "Watch for support",
+            "ndn": "Caution buying dips", "bear": "New exposure generally unfavorable"}
+NEAR_SELL = {"bull": "Potential profit-taking opportunity", "nup": "Watch for upside continuation",
+             "ndn": "Reduced or no exposure favored", "bear": "Potential selling or shorting opportunity"}
+
+
+def state_key(r):
+    if r["signal"] == "Bullish":
+        return "bull"
+    if r["signal"] == "Bearish":
+        return "bear"
+    return "nup" if r["rising"] else "ndn"
+
+
+def range_read(r):
+    pos = (r["price"] - r["buy"]) / (r["sell"] - r["buy"])
+    k = state_key(r)
+    if pos <= RANGE_NEAR:
+        return "Near buy: " + NEAR_BUY[k]
+    if pos >= 1 - RANGE_NEAR:
+        return "Near sell: " + NEAR_SELL[k]
+    return "Mid-range"
+
+
+def trend_legend():
+    li = lambda text: "".join(f'<li><span class="pill {k}">{dot} {lbl}</span> {text[k]}</li>'
+                              for k, lbl, dot, _ in TREND_STATES)
+    states = li({k: m for k, _, _, m in TREND_STATES})
+    return (f'<div class="legend"><div><h3>How to read the trend signal</h3><ul>{states}</ul></div>'
+            f'<div><h3>Near the buy level (low end of range)</h3><ul>{li(NEAR_BUY)}</ul></div>'
+            f'<div><h3>Near the sell level (top end of range)</h3><ul>{li(NEAR_SELL)}</ul></div></div>'
+            f'<p class="why">The trading range marks likely turning levels; the trend signal says how to read a test of either end. '
+            f'They are reference levels, not guaranteed turning points. Short selling carries extra risk, including unlimited losses.</p>')
+
+
+def trend_table(tr):
+    if not tr["date"]:
+        return '<section class="card trend"><h2>Trend ranges</h2><p class="why">No price data this run.</p></section>'
+    head = ('<tr class="thead"><th>Symbol</th><th class="nm">{title}</th><th>Current price</th>'
+            '<th class="buyh">Buy level</th><th class="sellh">Sell level</th><th>Upside</th>'
+            '<th>Downside</th><th class="sigh">Trend signal</th><th>Signal date</th>'
+            '<th>Signal price</th><th>Signal perf</th><th>Days</th><th class="rd">Read</th></tr>')
+    body = []
+    for title, rows in tr["groups"]:
+        body.append(head.format(title=title))
+        for r in rows:
+            sig = r["signal"]
+            arrow = "↑" if (sig == "Bullish" or (sig == "Neutral" and r["rising"])) else "↓"
+            perf_cls = "pg" if r["sig_perf"] > 0 else "pb"
+            read = range_read(r)
+            rcls = "mid" if read == "Mid-range" else state_key(r)
+            if r["gaps"] >= 2:
+                read, rcls = f"⚠ {r['gaps']} recent sessions missing from Yahoo; levels less reliable", "mid"
+            date = ("before " if r["sig_old"] else "") + f"{r['sig_date']:%-m/%-d/%Y}"
+            body.append(
+                f'<tr><td class="sym">{r["sym"]}</td><td class="nm">{r["name"]}</td>'
+                f'<td>{money(r["price"])}</td><td class="buy">{money(r["buy"])}</td>'
+                f'<td class="sell">{money(r["sell"])}</td>'
+                f'<td class="gtxt">{r["upside"]:.2f}%</td><td class="rtxt">{r["downside"]:.2f}%</td>'
+                f'<td class="sig {state_key(r)}">{sig} {arrow}</td><td>{date}</td>'
+                f'<td>{money(r["sig_price"])}</td><td class="{perf_cls}">{r["sig_perf"]:.2f}%</td>'
+                f'<td>{r["days"]}</td><td class="rd {rcls}">{read}</td></tr>')
+    return (f'<section class="card trend"><h2>Trend ranges · buy/sell levels &amp; trend signals</h2>'
+            f'<p class="why">Prices as of {tr["date"]:%b %d}. Buy and sell levels are a short-term trading range; '
+            f'the trend signal is the bigger picture. Index and sector ETFs first, then the largest stocks in each of the 11 sectors. Within each group, sorted by how long the trend has run.</p>'
+            f'<div class="tscroll"><table class="tt"><tbody>{"".join(body)}</tbody></table></div>'
+            f'{trend_legend()}</section>')
+
+
+def render(vix, br, hy, dx, rt, pr, checks, history, tr, macro):
     d1, d5, d20 = vix["d1"], vix["d5"], vix["d20"]
     cross = f"{vix['cross_date']:%b %d, %Y}" if vix["cross_date"] is not None else "–"
     fmt_days = lambda ds: ", ".join(f"{d:%b %d}" for d in ds[-8:]) or "none"
@@ -618,10 +803,11 @@ def render(vix, br, hy, dx, rt, pr, checks, history):
 <style>
 :root {{ --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#667085; --line:#e4e7ec;
   --good:#0f8a5f; --good-bg:#e3f6ee; --bad:#c2352b; --bad-bg:#fbe9e7;
-  --neu:#475467; --neu-bg:#eef1f5; --accent:#3559e0; }}
+  --neu:#475467; --neu-bg:#eef1f5; --accent:#3559e0; --hdr:#1d2b3a; --warn:#8a6100; --warn-bg:#fdf3d0; --orange:#b2470b; --orange-bg:#fde6d6; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --bg:#0f1115; --card:#181b21; --ink:#e8eaee;
   --muted:#98a2b3; --line:#2a2f38; --good:#3ecf8e; --good-bg:#12302a; --bad:#ff6b5e;
-  --bad-bg:#3a1a18; --neu:#c0c7d2; --neu-bg:#232832; --accent:#7c9bff; }} }}
+  --bad-bg:#3a1a18; --neu:#c0c7d2; --neu-bg:#232832; --accent:#7c9bff; --hdr:#26354a;
+  --warn:#f5c542; --warn-bg:#3a3014; --orange:#ff9a52; --orange-bg:#3a2214; }} }}
 * {{ box-sizing:border-box }}
 body {{ margin:0; background:var(--bg); color:var(--ink);
   font:15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
@@ -658,6 +844,28 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
 .check .mark {{ font-weight:700; grid-row:span 2 }} .check li.on .mark {{ color:var(--good) }} .check li.off .mark {{ color:var(--bad) }}
 .check .cname {{ font-weight:600 }} .check .cdet {{ color:var(--muted); font-size:13px }}
 .notes {{ color:var(--muted); font-size:13px; margin-top:20px }}
+{macro_brief.CSS.replace('{{', '{').replace('}}', '}')}
+.trend {{ margin-top:16px; padding:20px 0 12px }} .trend h2, .trend .why {{ padding:0 20px }}
+.tscroll {{ overflow-x:auto; -webkit-overflow-scrolling:touch }}
+.tt {{ width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums }}
+.tt td, .tt th {{ padding:5px 9px; text-align:center; white-space:nowrap; border-bottom:1px solid var(--line) }}
+.tt .thead th {{ background:var(--hdr); color:#fff; font-size:12px; font-weight:700; position:sticky; top:0 }}
+.tt .thead th.buyh {{ box-shadow:inset 0 -3px 0 var(--good) }} .tt .thead th.sellh {{ box-shadow:inset 0 -3px 0 var(--bad) }}
+.tt .thead th.sigh {{ color:#f5c542 }}
+.tt .sym {{ font-weight:700; position:sticky; left:0; background:var(--card) }}
+.tt .thead th:first-child {{ position:sticky; left:0; z-index:1 }}
+.tt .buy {{ background:var(--good-bg); color:var(--ink); font-weight:700 }}
+.tt .sell {{ background:var(--bad-bg); color:var(--ink); font-weight:700 }}
+.tt .gtxt {{ color:var(--good) }} .tt .rtxt {{ color:var(--bad) }}
+.tt .sig {{ font-weight:700 }}
+.bull {{ color:var(--good); background:var(--good-bg) }} .bear {{ color:var(--bad); background:var(--bad-bg) }}
+.nup {{ color:var(--warn); background:var(--warn-bg) }} .ndn {{ color:var(--orange); background:var(--orange-bg) }}
+.tt td.rd {{ text-align:left; font-size:12px; font-weight:600 }} .tt td.rd.mid {{ color:var(--muted); font-weight:400 }}
+.legend {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:4px 24px; padding:16px 20px 0 }}
+.legend h3 {{ font-size:14px; margin:0 0 6px }} .legend ul {{ list-style:none; margin:0 0 10px; padding:0 }}
+.legend li {{ padding:4px 0; font-size:13px; color:var(--muted) }}
+.pill {{ display:inline-block; font-weight:700; font-size:12px; padding:2px 8px; border-radius:999px; margin-right:4px }}
+.tt .pg {{ color:var(--good); background:var(--good-bg) }} .tt .pb {{ color:var(--bad); background:var(--bad-bg) }}
 </style></head><body><main>
 <h1>Market Bottom Daily Read</h1>
 <p class="sub">Updated {datetime.now():%a %b %d, %Y · %I:%M %p} ET ·
@@ -668,6 +876,8 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
   <div class="score">{score} of {len(checks)}<small> signals point to a bottom</small></div>
   <ul>{check_rows}</ul>
 </section>
+
+{macro_brief.render(macro)}
 
 <div class="grid">
   <section class="card">
@@ -765,6 +975,8 @@ table.kv td {{ padding:6px 0; border-top:1px solid var(--line) }} table.kv td:la
   </section>
 </div>
 
+{trend_table(tr)}
+
 <section class="card hist">
   <h2>Daily log</h2>
   <table><thead><tr><th>Date</th><th>VIX</th><th>VIX 1d</th><th>Fast drop &lt;25</th>
@@ -788,6 +1000,12 @@ Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
 <b>Strongest 90% signal:</b> a 90% up day within about 10 sessions of a 90% down day (Lowry's research).
 <b>Dollar:</b> ICE US Dollar Index. Reversing = made a 60-day high in the last 20 sessions, now {DXY_REVERSAL_PCT}%+ below it and under its 20-day average.
 <b>Yield curve:</b> 10-year minus 2-year Treasury yield from FRED (one business day behind). Flattening/steepening = {CURVE_MOVE_BPS}+ bps move in 20 days; rates stable = 10-year moved less than {RATES_STABLE_BPS} bps in 20 days.
+<b>Trend ranges:</b> buy level = {RANGE_EMA}-day exponential average minus {RANGE_BUY_MULT}× the {RANGE_ATR}-day average daily range (ATR);
+sell level = the same average plus {RANGE_SELL_MULT}× that range. Upside/downside = distance from today's price to the sell/buy level.
+Bullish/bearish = the {TREND_FAST}-day exponential average above/below the {TREND_SLOW}-day; neutral = the price has crossed back over the
+{TREND_SLOW}-day against the trend (↑ in a downtrend, yellow; ↓ in an uptrend, orange). These formulas were fitted to a published buy/sell-level
+sheet for Nov 24, 2026: most levels within about 1%, trend direction on 40 of 41 symbols. Signal date/price = the close when the current signal began; days are calendar days.
+Read = near buy/sell when the price is within {RANGE_NEAR:.0%} of the range from that end.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
@@ -806,10 +1024,14 @@ def main():
     rt = analyze_rates()
     print("Fetching sectors and index ranges…")
     pr = analyze_pressure()
+    print("Fetching trend-range symbols…")
+    tr = analyze_trends()
     checks = checklist(vix, br, hy, dx, rt, pr)
+    print("Building macro brief (official data + news)…")
+    macro = macro_brief.build(fred_series, vix, br, hy, dx, rt, pr, checks, tr)
     history = append_history(vix, br, hy, dx, rt, pr, checks)
     with open(REPORT, "w") as f:
-        f.write(render(vix, br, hy, dx, rt, pr, checks, history))
+        f.write(render(vix, br, hy, dx, rt, pr, checks, history, tr, macro))
     with open(os.path.join(HERE, "stamp.txt"), "w") as f:
         f.write(STAMP)
 

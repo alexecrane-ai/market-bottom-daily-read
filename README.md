@@ -16,4 +16,8 @@ To refresh on demand, open **Actions → Market Bottom Daily Read → Run workfl
 
 Run it locally: `python3 market_tracker.py` (needs pandas). Thresholds are at the top of the script.
 
+Under the checklist, **Today's macro highlights** shows the latest official US data from FRED (CPI, PCE, GDP, jobs, jobless claims, the Fed rate). If the repository has an `ANTHROPIC_API_KEY` secret (Settings → Secrets and variables → Actions), Claude also searches the day's financial news and economic calendar and writes the highlights, a table of recent releases (actual vs expected vs prior, and what it means) and the week's upcoming events. Each run is one Claude call with web search.
+
+Further down, a **trend ranges** table (like a buy/sell levels sheet) covers 15 index ETFs, the 11 sector ETFs, and the largest stocks in each of those 11 sectors (edit the lists in `TREND_GROUPS`). It shows a buy and sell level from a short-term trading range, a bullish/bearish/neutral trend signal, when that signal began, and how the price has done since.
+
 Not investment advice.
