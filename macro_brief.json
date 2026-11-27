@@ -1,0 +1,125 @@
+{
+ "headline": "Stocks are trying to steady in a holiday-thinned Black Friday session. Wednesday's choppy trade was driven by the AI selloff and new tariff proposals from the Trump administration, and the Nasdaq Composite is now in correction territory, while this week's data shows hot inflation and strong growth.",
+ "highlights": [
+  "Wednesday before Thanksgiving was mixed and very volatile. The Dow rose 0.3% to 50,182.95 after falling as much as 2.2% intraday, the S&P 500 slipped 0.25%, and the Nasdaq Composite fell 0.6% to 23,585.80 after being down as much as 4.6%. The Nasdaq is now 14.2% below its all-time high, which puts it in correction territory. The causes were new tariffs proposed by the Trump administration and a sharp drop in AI stocks. Mixed economic data helped markets win back part of the losses.",
+  "Tech is still where the damage is. QQQ (637.70) and XLK (156.53) have both been in Bearish trends since Oct 19. QQQ is about halfway between its buy level of 597.17 and its sell level of 664.60. Chip stocks bounced late Wednesday (MU +5.65%, NVDA +2.75%), but both remain in Bearish trends: MU at 612.74 against a 707.83 sell level, and NVDA at 146.03 against 165.60.",
+  "The inflation data points toward tighter policy. October core PCE, the Fed's preferred gauge, rose to 3.3% from 3.1%, headline PCE rose to 3.8%, and CPI is at 4.1%. Meanwhile Q3 GDP was revised to 4.3% annualized and initial jobless claims fell to 189k. Strong growth, a tight labor market and faster inflation make it hard for the Fed to ease after it raised its target to 4.00% in September. That fits the 10-year yield at 4.91% and the dollar at its highs (DXY 103.9, with UUP Bullish at 29.68, just under its 29.76 sell level).",
+  "Stress gauges have not cleared yet. The market-bottom checklist scores only 2/8. VIX is 26.89 (it closed Wednesday at 27.17), the VIX term structure is still inverted at 1.05, and there has been no 90% up day since the Nov 19 90% down day. Junk spreads have widened 54 bps in 20 days to 372 bps, and HYG (76.57) is in a Bearish trend just below its 76.82 sell level.",
+  "Investors are clearly favoring defensive stocks. XLV, XLP, XLU and XLRE are all in Bullish trends, as are staples names like PG, COST, WMT and KO. Cyclicals and commodities are Bearish: XLI, XLE, USO at 139.69, CPER and GSG. Breadth is improving: 62% of stocks are above their 50-day averages (up from a 20-day low of 43%), 71.9% of stocks are up today, and XLF and XLC moved from Bearish to Neutral today.",
+  "The 10-year yield is down 9 bps over 20 days and the 2s10s curve is +24 bps. That relief on rates is one of the two checklist signals that are on, and it helps explain why rate-sensitive XLU and XLRE are holding up. A further jump in inflation expectations would put that support at risk. Note: this run's search budget ran out before next week's calendar and the consensus figures could be confirmed, so the dates below follow the standard release schedule and consensus is n/a."
+ ],
+ "releases": [
+  {
+   "date": "This week",
+   "event": "Core PCE (Oct, y/y)",
+   "actual": "3.3%",
+   "expected": "n/a",
+   "prior": "3.1%",
+   "read": "Accelerating and well above the Fed's 2% goal. This argues against easing and in favor of keeping rates restrictive, consistent with the dollar at its highs and the 10-year at 4.91%."
+  },
+  {
+   "date": "This week",
+   "event": "PCE inflation (Oct, y/y)",
+   "actual": "3.8%",
+   "expected": "n/a",
+   "prior": "3.7%",
+   "read": "Headline inflation is still rising. It matches the 4.1% CPI and adds to the pressure on long-duration growth stocks (QQQ, XLK Bearish)."
+  },
+  {
+   "date": "This week",
+   "event": "Real GDP (Q3, q/q annualized)",
+   "actual": "4.3%",
+   "expected": "n/a",
+   "prior": "2.2%",
+   "read": "Strong growth. That is good for earnings, but alongside rising inflation it reduces the case for Fed rate cuts."
+  },
+  {
+   "date": "This week",
+   "event": "Initial jobless claims (week of Nov 21)",
+   "actual": "189k",
+   "expected": "n/a",
+   "prior": "202k",
+   "read": "A very low level that points to a tight labor market and backs up the +165k October payrolls gain. It gives the Fed little reason to ease."
+  }
+ ],
+ "upcoming": [
+  {
+   "date": "Nov 27",
+   "time": "13:00 ET",
+   "event": "Early close for US stocks (day after Thanksgiving)",
+   "expected": "n/a",
+   "why": "Light volume can exaggerate price moves. Watch whether VIX holds below 25 and whether a broad up day starts to check off bottom signals."
+  },
+  {
+   "date": "Dec 1",
+   "time": "10:00 ET",
+   "event": "ISM Manufacturing (Nov)",
+   "expected": "n/a",
+   "why": "Watch the prices-paid index for signs of tariff-driven inflation. The result will matter for XLI and the Bearish trends in materials and commodities."
+  },
+  {
+   "date": "Dec 3",
+   "time": "08:30 ET",
+   "event": "Initial jobless claims (weekly)",
+   "expected": "n/a",
+   "why": "Shows whether claims stay near 189k. Continued tightness in the labor market would add to rate pressure."
+  },
+  {
+   "date": "Dec 3",
+   "time": "10:00 ET",
+   "event": "ISM Services (Nov)",
+   "expected": "n/a",
+   "why": "Services prices are the core of sticky inflation, with core PCE at 3.3%."
+  },
+  {
+   "date": "Dec 4",
+   "time": "08:30 ET",
+   "event": "Employment report (Nov): payrolls, unemployment rate",
+   "expected": "n/a",
+   "why": "This is the last major jobs report before the December FOMC. Another strong print after October's +165k payrolls and 4.1% unemployment would raise the odds of more tightening, which would weigh on QQQ and IWM (IWM is at 270.89, just below its 274.94 sell level)."
+  }
+ ],
+ "sources": [
+  {
+   "url": "https://finance.yahoo.com/markets/stocks/articles/stock-market-news-nov-27-075400531.html",
+   "title": "Stock Market News for Nov 27, 2026"
+  },
+  {
+   "url": "https://www.metatrader.com/en/news/zacks/5120943-stock-market-news-for-nov-27-2026",
+   "title": "Stock Market News for Nov 27, 2026 \u2014 Latest News"
+  },
+  {
+   "url": "https://wallstreetplumber.substack.com/p/recon-daily-november-27-2026",
+   "title": "Recon Daily"
+  },
+  {
+   "url": "https://www.tradingview.com/news/cnbctv:f43e8503d094b:0/",
+   "title": "News by CNBC TV18 on TradingView, 2026-11-27 \u2014 cnbctv:f43e8503d094b:0"
+  },
+  {
+   "url": "https://leafyecfa.substack.com/p/morning-brief-11272026-us-equity",
+   "title": "Morning Brief 11/27/2026 - U.S. Equity Market"
+  },
+  {
+   "url": "https://www.zacks.com/stock/news/2823061/stock-market-news-for-jan-27-2026",
+   "title": "stock market news for jan 27 2026"
+  },
+  {
+   "url": "https://finance.yahoo.com/news/stock-market-today-jan-2-164540630.html",
+   "title": "stock market today jan 2 164540630"
+  },
+  {
+   "url": "https://algotradealert.substack.com/p/stock-market-update-tuesday-november-ed5",
+   "title": "Daily Stock Market Update"
+  },
+  {
+   "url": "https://finance.yahoo.com/personal-finance/investing/article/is-the-stock-market-open-on-presidents-day-what-to-know-about-the-holiday-trading-schedule-in-2026-210239969.html",
+   "title": "is the stock market open on presidents day what to know about the holiday trading schedule in 2026 210239969"
+  },
+  {
+   "url": "https://www.xtb.com/en/market-analysis/economic-calendar-us-pce-data-in-market-focus-25-11-2026",
+   "title": "Economic calendar: US PCE data in market focus (25.11.2026)"
+  }
+ ],
+ "generated": "2026-11-27 10:00"
+}
