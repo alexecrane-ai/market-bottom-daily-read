@@ -12,6 +12,18 @@ A twice-daily read on market-bottom signals, summed up in a 8-point **bottom che
 **Report:** https://alexecrane-ai.github.io/market-bottom-daily-read/
 
 Runs automatically at 10:00am and 3:00pm New York time, Monday to Friday (GitHub Actions).
+
+GitHub's own timer often fires hours late or not at all, so a small job on the Mac backs it up.
+It checks every 15 minutes (and when the Mac wakes) and asks GitHub to run the report once per
+window if it hasn't been saved yet. To install it once (needs the `gh` CLI, logged in):
+
+```bash
+bash local-trigger/install.sh
+```
+
+Remove it with `bash local-trigger/install.sh --uninstall`. Log: `~/Library/Logs/market-read-trigger.log`.
+A late run still counts: the afternoon window runs until midnight New York time, so a delayed
+run still saves the day's close.
 To refresh on demand, open **Actions → Market Bottom Daily Read → Run workflow** (also works in the GitHub mobile app).
 
 Run it locally: `python3 market_tracker.py` (needs pandas). Thresholds are at the top of the script.

@@ -6,7 +6,14 @@ on:
     # or skip, so it wakes at :05, :25 and :45 across the summer and winter UTC hours.
     # .github/gate.sh runs the first wake-up in each window and skips the rest.
     - cron: "5,25,45 14,15,16,19,20,21 * * 1-5"
+  # GitHub's timer is unreliable on this repo (on Mon Nov 23 it delivered 1 of 18 wake-ups,
+  # 4+ hours late), so a launchd job on the Mac (local-trigger/) also dispatches timed runs.
   workflow_dispatch:          # "Run workflow" button (works from the GitHub mobile app)
+    inputs:
+      timed:
+        description: "Timed run from the local trigger (skips if this window's report is already saved)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,6 +41,7 @@ jobs:
         id: gate
         env:
           EVENT: ${{ github.event_name }}
+          TIMED: ${{ inputs.timed }}
           GH_TOKEN: ${{ github.token }}
         run: bash .github/gate.sh
 

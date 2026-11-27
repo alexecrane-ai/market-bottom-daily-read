@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-# Decides whether a timed (scheduled) run should do the work.
-# GitHub's timer can fire late or skip a run, so the workflow wakes up at several
-# backup times. The first wake-up inside a window does the update; later ones see
-# that the report was already saved and skip.
-#   Windows (New York time, weekdays): 10:00-11:59 and 15:00-16:59
+# Decides whether a timed run should do the work.
+# Timed runs come from GitHub's schedule or from the Mac's launchd trigger
+# (workflow_dispatch with timed=true). Either can fire late, early or more than once,
+# so the first timed run inside a window does the update; later ones see that the
+# report was already saved and skip. A manual "Run workflow" press always runs.
+#   Windows (New York time, weekdays):
+#     morning   10:00-14:59  (the 10am read)
+#     afternoon 15:00-23:59  (the 3pm read; a late run still saves the day's close)
 set -u
 out=${GITHUB_OUTPUT:-/dev/stdout}
-if [ "${EVENT:-schedule}" != "schedule" ]; then echo "run=true" >> "$out"; exit 0; fi
+if [ "${EVENT:-schedule}" != "schedule" ] && [ "${TIMED:-false}" != "true" ]; then
+  echo "Manual run."; echo "run=true" >> "$out"; exit 0
+fi
 
+dow=$(TZ=America/New_York date +%u)
 h=$(TZ=America/New_York date +%-H)
+if [ "$dow" -gt 5 ]; then
+  echo "Skipping: it's the weekend in New York."; echo "run=false" >> "$out"; exit 0
+fi
 case $h in
-  10|11) slot=10 ;;
-  15|16) slot=15 ;;
+  10|11|12|13|14) slot=10 ;;
+  15|16|17|18|19|20|21|22|23) slot=15 ;;
   *) echo "Skipping: ${h}:00 New York is outside the 10am/3pm windows."; echo "run=false" >> "$out"; exit 0 ;;
 esac
 since=$(date -u -d "TZ=\"America/New_York\" $(TZ=America/New_York date +%F) ${slot}:00" +%Y-%m-%dT%H:%M:%SZ)
