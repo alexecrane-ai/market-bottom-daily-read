@@ -16,6 +16,6 @@ To refresh on demand, open **Actions → Market Bottom Daily Read → Run workfl
 
 Run it locally: `python3 market_tracker.py` (needs pandas). Thresholds are at the top of the script.
 
-Below the checklist, a **trend ranges** table (like a buy/sell levels sheet) covers 15 index ETFs, the 11 sector ETFs and 16 heavily traded stocks. It shows a buy and sell level from a short-term trading range, a bullish/bearish/neutral trend signal, when that signal began, and how the price has done since.
+Below the checklist, a **trend ranges** table (like a buy/sell levels sheet) covers 15 index ETFs, the 11 sector ETFs, and the largest stocks in each of those 11 sectors (edit the lists in `TREND_GROUPS`). It shows a buy and sell level from a short-term trading range, a bullish/bearish/neutral trend signal, when that signal began, and how the price has done since.
 
 Not investment advice.

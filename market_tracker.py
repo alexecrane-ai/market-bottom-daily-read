@@ -460,12 +460,32 @@ TREND_GROUPS = [
                          "XLP": "Consumer Staples", "XLK": "Technology", "XLU": "Utilities",
                          "XLRE": "Real Estate", "XLE": "Energy", "XLB": "Materials",
                          "XLF": "Financials", "XLY": "Consumer Discretionary"}),
-    ("Most Traded Stocks", {"AAPL": "Apple", "GOOGL": "Alphabet", "AVGO": "Broadcom",
-                            "JPM": "JPMorgan", "LLY": "Eli Lilly", "BRK-B": "Berkshire Hathaway",
-                            "SNDK": "SanDisk", "MU": "Micron", "WMT": "Walmart", "MRVL": "Marvell",
-                            "NVDA": "Nvidia", "META": "Meta", "AMD": "AMD", "MSFT": "Microsoft",
-                            "AMZN": "Amazon", "TSLA": "Tesla"}),
-]
+] + [(f"{name} · {etf} stocks", stocks) for etf, name, stocks in [
+    # Largest holdings of each Select Sector SPDR (edit to taste).
+    ("XLK", "Technology", {"NVDA": "Nvidia", "AAPL": "Apple", "MSFT": "Microsoft", "AVGO": "Broadcom",
+                           "ORCL": "Oracle", "AMD": "AMD", "MU": "Micron", "SNDK": "SanDisk"}),
+    ("XLF", "Financials", {"BRK-B": "Berkshire Hathaway", "JPM": "JPMorgan", "V": "Visa",
+                           "MA": "Mastercard", "BAC": "Bank of America", "WFC": "Wells Fargo",
+                           "GS": "Goldman Sachs"}),
+    ("XLV", "Healthcare", {"LLY": "Eli Lilly", "JNJ": "Johnson & Johnson", "ABBV": "AbbVie",
+                           "UNH": "UnitedHealth", "MRK": "Merck", "ABT": "Abbott"}),
+    ("XLI", "Industrials", {"GE": "GE Aerospace", "CAT": "Caterpillar", "RTX": "RTX",
+                            "GEV": "GE Vernova", "UBER": "Uber", "BA": "Boeing", "HON": "Honeywell"}),
+    ("XLC", "Communication Services", {"META": "Meta", "GOOGL": "Alphabet", "NFLX": "Netflix",
+                                       "DIS": "Disney", "TMUS": "T-Mobile", "T": "AT&T"}),
+    ("XLP", "Consumer Staples", {"WMT": "Walmart", "COST": "Costco", "PG": "Procter & Gamble",
+                                 "KO": "Coca-Cola", "PM": "Philip Morris", "PEP": "PepsiCo"}),
+    ("XLU", "Utilities", {"NEE": "NextEra Energy", "SO": "Southern Co", "CEG": "Constellation Energy",
+                          "DUK": "Duke Energy", "VST": "Vistra"}),
+    ("XLRE", "Real Estate", {"WELL": "Welltower", "PLD": "Prologis", "AMT": "American Tower",
+                             "EQIX": "Equinix", "SPG": "Simon Property"}),
+    ("XLE", "Energy", {"XOM": "Exxon Mobil", "CVX": "Chevron", "COP": "ConocoPhillips",
+                       "WMB": "Williams", "EOG": "EOG Resources"}),
+    ("XLB", "Materials", {"LIN": "Linde", "NEM": "Newmont", "SHW": "Sherwin-Williams",
+                          "ECL": "Ecolab", "FCX": "Freeport-McMoRan"}),
+    ("XLY", "Consumer Discretionary", {"AMZN": "Amazon", "TSLA": "Tesla", "HD": "Home Depot",
+                                       "MCD": "McDonald's", "BKNG": "Booking", "TJX": "TJX"}),
+]]
 
 
 def trend_row(sym, name, df):
@@ -728,7 +748,7 @@ def trend_table(tr):
                 f'<td>{r["days"]}</td><td class="rd {rcls}">{read}</td></tr>')
     return (f'<section class="card trend"><h2>Trend ranges · buy/sell levels &amp; trend signals</h2>'
             f'<p class="why">Prices as of {tr["date"]:%b %d}. Buy and sell levels are a short-term trading range; '
-            f'the trend signal is the bigger picture. Sorted by how long each trend has run.</p>'
+            f'the trend signal is the bigger picture. Index and sector ETFs first, then the largest stocks in each of the 11 sectors. Within each group, sorted by how long the trend has run.</p>'
             f'<div class="tscroll"><table class="tt"><tbody>{"".join(body)}</tbody></table></div>'
             f'{trend_legend()}</section>')
 
