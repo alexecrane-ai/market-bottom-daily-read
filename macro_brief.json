@@ -1,45 +1,53 @@
 {
- "headline": "Stocks are bouncing in today's half-day Black Friday session after a rough Wednesday. Bonds are pulling the other way: hot October inflation has markets pricing a near-certain Fed hike on Dec 9, pushing the 10-year back above 4.9% and holding the dollar at its highs.",
+ "headline": "Stocks extended a strong holiday-shortened week with a Black Friday tech rebound, but the macro backdrop got tighter: core PCE rose to a 3-year high of 3.3%, Q3 GDP was revised up to 4.3%, and jobless claims fell to 189k, so markets now see a December 9 Fed hike as nearly certain.",
  "highlights": [
-  "Rally, but the trends are still bearish. By late morning the S&P 500 was up about 1.4% near 7,282 and the Nasdaq about 1.9%. Tech led, Amazon rose about 4% on strong Black Friday demand, and Adobe counted about $7.1B in Thanksgiving Day online sales, up 10.4% from last year. Breadth is strong: 81.1% of stocks are up and no sector is down. Even so, SPY (728.32) and QQQ (650.99) are still in Bearish trends, sitting inside their ranges below the 741.33 and 669.6 sell levels. AMZN (254.12) is still Bearish, while TSLA turned Bullish today at 400.00, just under its 408.24 sell level.",
-  "The Fed is on track to hike. October core PCE, the Fed's preferred gauge, rose to 3.3% year over year against 3.2% expected, the highest in 3 years. Headline PCE came in at 3.8%. Minutes from the last Fed meeting said almost all officials think further hikes would likely be appropriate. As of Nov 26, swap-market pricing put the chance of a 0.25-point hike on Dec 9 at 96%, which would lift the 4.00% upper bound to 4.25%. Fed officials go quiet before the Dec 8\u20139 meeting, so the data, not Fed speeches, will move expectations next week.",
-  "Rates and the dollar are pushing back against the rally. The 10-year yield rose more than 6 bps to about 4.91\u20134.93%, in line with the dashboard's 4.91%. The 2-year is near 4.68\u20134.70%, and the dashboard's 10y\u20132y spread is +24 bps. The Dollar Index is about 104.0, which the dashboard flags as AT HIGHS. UUP (29.72) is Bullish and sits just under its 29.78 sell level, while FXE (100.98) stays Bearish. The strong dollar is one of three items still keeping the bottom checklist at 5/8.",
-  "Volatility has calmed but credit hasn't confirmed. Wednesday was very choppy: new tariff proposals and a sharp AI selloff took the S&P 500 down 3.2% at its intraday low before it closed 0.3% lower at 7,182.78. The VIX closed that day at 27.17 and is now 23.81, a fast drop below 25. Junk-bond spreads at 377 bps are still VOLATILE, up 51 bps in 20 days, and HYG (76.61) is Bearish between 76.08 and 76.83. The checklist also still lacks a 90% up day; the last 90% down day was Nov 19.",
-  "Strong growth and jobs data keep the Fed leaning toward hikes. Initial jobless claims fell to 189K, matching the lowest since 1969, and Q3 GDP is at a revised 4.3% annualized. A hot economy with inflation rising helps explain why the defensive sectors hold Bullish trends: XLU 43.73, XLP 92.68 and XLV 184.2. XLRE (44.14) is also Bullish despite a near-4.9% 10-year. Cyclical sectors XLI (165.56) and XLE (61.67) remain Bearish.",
-  "Commodities are mixed. Gold rose more than 1.6% to about $3,633 despite higher yields and a stronger dollar. On the dashboard, GLD (334.4) is still Bearish below its 341.4 sell level and GDX (79.18) is just under its 79.55 sell level. WTI crude was about $84.47 early, up 0.9%, but USO (137.77) has been Bearish since Nov 9."
+  "Inflation is moving further from the Fed's 2% goal. October core PCE, the Fed's preferred gauge, rose 3.3% y/y against a 3.2% forecast and 3.1% in September, its highest in about three years. Headline PCE was 3.8%, in line with forecasts. The dashboard's official data shows the same pattern: core CPI rose to 2.9% from 2.8% and headline CPI to 4.1% from 4.0%. After the PCE report, estimated odds of a 25 bp hike on December 9 reached 98.1%, from a target range of 3.75\u20134.00% (upper bound 4.00% on the dashboard).",
+  "Growth and jobs give the Fed little reason to wait. Q3 GDP was revised up to a 4.3% annualized pace from 3.4%, the fastest in three years. Initial jobless claims fell to 189k against 200k expected, tying the 2026 low, and October payrolls were +165k. Fed officials have been hawkish: last week's minutes showed almost all officials expect more hikes, Waller said a half-point hike should be considered, and Williams said no 'dramatic' move is needed. Treasury Secretary Bessent warned that overtightening could hurt the economy. The Fed's quiet period before the meeting starts Nov 28, so no Fed speakers are expected in the coming week.",
+  "Stocks rose for a third straight day in the half-day session. The Dow was up about 510 points (+1%), the S&P 500 +1.2% and the Nasdaq +1.7%, led by chips, Meta and Amazon. Before today, the Dow and S&P were each up about 5% for the week, the best week since April 2025. On the dashboard, 81.1% of stocks are up, no sector is down, and the bottom checklist scores 5/8: VIX is back below 25 at 23.81 and 63% of stocks are above their 50-day averages. Still, there has been no 90% up day since the Nov 19 90% down day. SPY (728.32) and QQQ (650.99) remain in bearish trends, below their sell levels of 741.33 and 669.60.",
+  "Rates and the dollar are working against the rally. The 10-year yield rose about 6.5 bp to roughly 4.93% today after hitting a 2\u00bd-month low near 4.80% on Thursday; the dashboard shows 4.91%. The dollar index is near 104.00, close to a 19-month high. UUP is the only bullish index ETF on the dashboard (29.72, sell level 29.78), and its 'Dollar reversing lower' checklist item is still off. FXE (100.98) and the bearish trends in GLD (334.40), SLV and GDX are consistent with a firm dollar, although gold rose more than 1.6% today.",
+  "Credit has not confirmed the bounce. High-yield spreads are 377 bps and 'volatile,' up 51 bps over 20 days, and HYG (76.61) is still bearish, below its 76.83 sell level. Rate-sensitive small caps are close to a test: IWM is at 273.79, just under its 276.06 sell level, in a bearish trend since September. Despite the 4.9% 10-year, the dashboard's defensive sectors stay bullish: XLU (43.73), XLP (92.68), XLV (184.20) and XLRE (44.14). XLF and XLC turned neutral today.",
+  "Oil is a second inflation risk. Brent settled 3.5% higher at $94.61 on Wednesday after Yemen's Houthis said they attacked Saudi Arabia's largest oil refinery, and it was quoted at $96.33 on Nov 26. On the dashboard, energy trends have not followed: USO (137.77, sell level 142.44), XLE (61.67) and XOM, CVX, COP and EOG all remain bearish."
  ],
  "releases": [
   {
    "date": "Nov 25",
-   "event": "Core PCE (Oct, y/y)",
+   "event": "Core PCE price index (Oct, y/y)",
    "actual": "3.3%",
    "expected": "3.2%",
    "prior": "3.1%",
-   "read": "Hotter than expected and the highest in 3 years. Core prices rose 0.3% for the month, and the 3-month annualized pace is 3.6%. This locks in December hike expectations."
+   "read": "Hotter than expected and the highest in about 3 years. This is the Fed's preferred gauge, and it essentially secures a December hike (about 98% priced)."
   },
   {
    "date": "Nov 25",
-   "event": "PCE Price Index (Oct, y/y)",
+   "event": "Core PCE price index (Oct, m/m)",
+   "actual": "0.3%",
+   "expected": "0.3%",
+   "prior": "n/a",
+   "read": "In line with forecasts. The year-over-year rise reflects the trend building up, not one hot month."
+  },
+  {
+   "date": "Nov 25",
+   "event": "PCE price index (Oct, y/y)",
    "actual": "3.8%",
    "expected": "3.8%",
    "prior": "3.7% (revised from 3.6%)",
-   "read": "In line with forecasts, but September was revised higher. The monthly rise slowed to 0.3% from 0.5%. Real spending was roughly flat, and the saving rate rose to 4.1%."
+   "read": "In line, but nearly twice the Fed's 2% target, and September was revised higher."
   },
   {
    "date": "Nov 25",
-   "event": "Initial Jobless Claims (week to Nov 21)",
+   "event": "Real GDP, 2nd estimate (Q3, q/q ann.)",
+   "actual": "4.3%",
+   "expected": "n/a",
+   "prior": "3.4% (advance)",
+   "read": "A big upward revision driven by consumer spending and software investment. Gross domestic income grew 4.4%, which backs up the strength. It adds to the case for tighter policy. Third estimate due Dec 23."
+  },
+  {
+   "date": "Nov 25",
+   "event": "Initial jobless claims (week to Nov 21)",
    "actual": "189K",
    "expected": "200K",
    "prior": "202K",
-   "read": "Better than expected, matching the year's low and the lowest since 1969. Continuing claims fell 95K to 1.70M. The labor market looks too tight for the Fed to stop hiking."
-  },
-  {
-   "date": "Nov 27",
-   "event": "Real GDP (Q3, q/q annualized, revised)",
-   "actual": "4.3%",
-   "expected": "n/a",
-   "prior": "2.2% (Q2)",
-   "read": "Shows a resilient economy. With strong growth and core inflation at 3.3%, the Fed has little reason to stop hiking."
+   "read": "Lower than expected, tying the 2026 low, though mostly because of seasonal adjustment (unadjusted claims rose about 16K). Continuing claims fell 95K to 1.70M in the week that the November jobs survey covered."
   },
   {
    "date": "Nov 24",
@@ -47,115 +55,108 @@
    "actual": "3",
    "expected": "n/a",
    "prior": "-2",
-   "read": "Turned positive, adding to signs of firm factory activity ahead of next week's ISM report."
+   "read": "Turned back into expansion. Another sign that factory activity is holding up."
   }
  ],
  "upcoming": [
   {
-   "date": "Nov 30",
-   "time": "9:45 ET",
-   "event": "Chicago PMI (Nov)",
-   "expected": "n/a",
-   "why": "First regional reading of the week. A firm print would support the strong-growth story weighing on QQQ and IWM."
+   "date": "Nov 28 to Dec 9",
+   "time": "n/a",
+   "event": "Fed quiet period before the Dec 8\u20139 FOMC",
+   "expected": "25 bp hike to 4.00\u20134.25% (about 98% priced)",
+   "why": "No Fed speakers until the decision. Data, especially Friday's payrolls, will drive rate pricing. Markets are debating whether hikes continue in January and March."
   },
   {
    "date": "Nov 30",
    "time": "10:30 ET",
-   "event": "Dallas Fed Manufacturing Index (Nov)",
-   "expected": "10.2 (prior 13.4)",
-   "why": "Expected to cool slightly. It's also an energy-region read while XLE and USO are in Bearish trends."
+   "event": "Dallas Fed Texas Manufacturing Outlook (Nov)",
+   "expected": "10.2",
+   "why": "Prior 13.4. An early regional read on manufacturing with oil near $95 Brent."
   },
   {
    "date": "Dec 1",
    "time": "10:00 ET",
-   "event": "ISM Manufacturing (Nov)",
-   "expected": "55.2 (prior 55.5)",
-   "why": "Still well into expansion. A strong prices-paid reading would add to inflation worries and the pressure on yields with the 10-year at 4.91%."
+   "event": "ISM Manufacturing PMI (Nov)",
+   "expected": "55.2",
+   "why": "Prior 55.5. A reading still well above 50, alongside 4.3% GDP, would support higher yields and a stronger dollar (UUP bullish). It matters for the bearish XLI and CAT trends."
   },
   {
-   "date": "Dec 2",
-   "time": "n/a",
-   "event": "ADP Employment (Nov)",
+   "date": "Dec 1",
+   "time": "10:00 ET",
+   "event": "JOLTS job openings (Oct)",
    "expected": "n/a",
-   "why": "First private-payrolls read before Friday's jobs report, with the Fed's blackout period limiting other signals."
+   "why": "Shows demand for labor before Friday's payrolls. A strong number would add to the hawkish case."
+  },
+  {
+   "date": "Dec 1",
+   "time": "10:00 ET",
+   "event": "Construction spending (Oct)",
+   "expected": "+0.8%",
+   "why": "A rate-sensitive sector with the 10-year near 4.9%. Relevant to XLRE and HD."
   },
   {
    "date": "Dec 3",
    "time": "8:30 ET",
-   "event": "Initial Jobless Claims (week to Nov 28)",
-   "expected": "193K (prior 189K)",
-   "why": "Claims near 57-year lows have supported hike pricing. A move up would be the first sign of the job market easing."
+   "event": "Initial jobless claims (week to Nov 28)",
+   "expected": "n/a",
+   "why": "The week includes Thanksgiving, so seasonal swings are likely. The last reading of 189K ties the year's low."
   },
   {
    "date": "Dec 3",
    "time": "10:00 ET",
-   "event": "ISM Services (Nov)",
-   "expected": "54.5 (prior 54.5)",
-   "why": "Services drive core inflation, so watch the prices component given core PCE at 3.3%."
+   "event": "ISM Services PMI (Nov)",
+   "expected": "54.5",
+   "why": "Prior 54.5. Watch the prices-paid detail for services inflation, the sticky part of core PCE at 3.3%."
   },
   {
    "date": "Dec 4",
    "time": "8:30 ET",
-   "event": "Nonfarm Payrolls / Unemployment Rate (Nov)",
-   "expected": "90K / 4.1% (prior 165K / 4.1%); avg hourly earnings +0.3% m/m (prior +0.4%)",
-   "why": "The last big data point before the Dec 8\u20139 Fed meeting. A second strong month could revive talk of a 0.5-point hike and test the rebound in SPY and QQQ."
-  },
-  {
-   "date": "Dec 4",
-   "time": "n/a",
-   "event": "University of Michigan Consumer Sentiment (Dec, prelim)",
-   "expected": "n/a",
-   "why": "Inflation expectations in this survey matter with headline PCE at 3.8% and Black Friday spending in focus for XLY and AMZN."
-  },
-  {
-   "date": "Week of Nov 30",
-   "time": "n/a",
-   "event": "Salesforce earnings",
-   "expected": "n/a",
-   "why": "Test of software and AI demand after Wednesday's AI selloff. XLK (160.15) is still Bearish."
+   "event": "Nonfarm payrolls and unemployment rate (Nov)",
+   "expected": "Payrolls: n/a (Kalshi median 90K\u2013100K); Unemployment: 4.1%",
+   "why": "Prior +165K and 4.1%. Considered the only release that could derail a December hike, and only if job losses are severe. It will matter for IWM at its 276.06 sell level and for HYG."
   }
  ],
  "sources": [
   {
-   "url": "https://thehalfpercentclub.substack.com/p/todays-stock-selection-friday-november",
-   "title": "Today\u2019s Stock Selection \u2014 Friday, November 27, 2026"
+   "url": "https://www.metatrader.com/en/economic-calendar/united-states/ism-manufacturing-new-orders",
+   "title": "ISM Manufacturing New Orders 2026 - economic indicator from the United States"
   },
   {
-   "url": "https://finance.yahoo.com/markets/stocks/articles/stock-market-news-nov-27-075400531.html",
-   "title": "Stock Market News for Nov 27, 2026"
+   "url": "https://www.metatrader.com/en/economic-calendar/united-states/ism-manufacturing-pmi",
+   "title": "ISM Manufacturing PMI 2026 - economic indicator from the United States"
   },
   {
-   "url": "https://www.fool.com/coverage/stock-market-today/2026/11/27/stock-market-midday-nov-27-tech-stocks-recover-and-amazon-posts-black-friday-gains/",
-   "title": "Stock Market Midday, Nov. 27: Tech Stocks Recover and Amazon Posts Black Friday Gains"
+   "url": "https://economicweekly.substack.com/p/economic-weekly-november-27-2026",
+   "title": "Economic Weekly November 27, 2026"
   },
   {
-   "url": "https://www.tradingview.com/news/cnbctv:f8fd8364c094b:0/",
-   "title": "News by CNBC TV18 on TradingView, 2026-11-27 \u2014 cnbctv:f8fd8364c094b:0"
+   "url": "https://www.investing.com/economic-calendar/ism-manufacturing-new-orders-index-1483",
+   "title": "United States ISM Manufacturing New Orders Index"
   },
   {
-   "url": "https://aroundprague.cz/en/news/us/stock-market-today-dow-gains-344-points-s-p-500-up-0-66-and-nasdaq-rises-0-82",
-   "title": "Stock Market Today: Dow Gains 344 Points, S&P 500 Up 0.66% and Nasdaq Rises 0.82% as Tech Rebounds"
+   "url": "https://www.investing.com/economic-calendar/ism-manufacturing-pmi-173",
+   "title": "United States ISM Manufacturing PMI"
   },
   {
-   "url": "https://leafyecfa.substack.com/p/morning-brief-11272026-us-equity",
-   "title": "Morning Brief 11/27/2026 - U.S. Equity Market"
+   "url": "https://www.prnewswire.com/news-releases/ism-reports-economic-improvement-to-continue-in-2026-302642703.html",
+   "title": "ISM\u00ae REPORTS ECONOMIC IMPROVEMENT TO CONTINUE IN 2026"
   },
   {
-   "url": "https://uk.finance.yahoo.com/news/live/stock-market-today-firday-november-27-dow-sp-500-nasdaq-black-friday-holiday-091152065.html",
-   "title": "Stock market today: Dow, S&P 500, Nasdaq end holiday week with gains as AI stocks rebound"
+   "url": "https://helious.io/news/rel-ev-6335237cbd9d4707/ism-manufacturing-pmi-55-5",
+   "title": "ISM Manufacturing PMI"
   },
   {
-   "url": "https://eurasiabusinessnews.com/2026/11/27/u-s-stock-market-today-november-27-2026-tech-rebounds-in-shortened-black-friday-session/",
-   "title": "U.S. Stock Market Today, November 27, 2026: Tech Rebounds in Shortened Black Friday Session"
+   "url": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+   "title": "Release Dates for the ISM Manufacturing and Non-Manufacturing Report On Business\u00ae"
   },
   {
-   "url": "https://journalarta.com/en/2026/11/27/sp-500-nasdaq-and-dow-open-higher-on-black-friday-as-tech-and-china-rally-lift-mood/",
-   "title": "Stock Market Today \u2014 JournalArta Global"
+   "url": "https://www.financecalendar.com/event/us-ism-manufacturing-pmi-november-2026/",
+   "title": "US ISM Manufacturing PMI \u2014 Monday, 2 November 2026"
   },
   {
-   "url": "https://www.indmoney.com/blog/us-stocks/us-pce-inflation-fed-interest-rate-outlook-2027",
-   "title": "US Inflation Hits 3.8%: Fed Interest Rate Outlook for 2027"
+   "url": "https://www.fxstreet.com/news/us-ism-manufacturing-pmi-unchanged-at-467-in-november-vs-476-expected-202312011509",
+   "title": "us ism manufacturing pmi unchanged at 467 in november vs 476 expected 202312011509"
   }
  ],
- "generated": "2026-11-27 13:56"
+ "generated": "2026-11-27 15:00"
 }
