@@ -72,9 +72,12 @@ CURVE_MOVE_BPS = 10        # 10y-2y change over 20 days that counts as flattenin
 RATES_STABLE_BPS = 25      # 10y yield moving less than this over 20 days = stabilizing
 RALLY_PCT = 1.0            # intraday move vs prior close that counts as a big rally/drop
 WASHOUT_PCT = 20           # under this % of stocks above their 50-day average = washed out
-TREND_FAST, TREND_SLOW = 20, 50   # EMAs that set the trend signal
-RANGE_EMA = 10             # trade range is centred on this EMA ...
-RANGE_ATR_MULT = 1.5       # ... plus/minus this many average daily ranges (ATR 14)
+# Trend ranges, calibrated to a published buy/sell-level sheet (Nov 24, 2026 closes):
+TREND_FAST, TREND_SLOW = 10, 30   # EMA crossover sets bullish/bearish
+RANGE_EMA = 5              # trade range is anchored on this EMA ...
+RANGE_ATR = 10             # ... and scaled by this many days' average daily range (ATR)
+RANGE_BUY_MULT = 1.71      # buy level = EMA - this x ATR
+RANGE_SELL_MULT = 1.04     # sell level = EMA + this x ATR
 RANGE_NEAR = 0.25          # within this share of the range from an end = "near" that level
 
 
@@ -493,28 +496,33 @@ def trend_row(sym, name, df):
     c = df["close"]
     hi, lo = df["high"].fillna(c), df["low"].fillna(c)
     tr = pd.concat([hi - lo, (hi - c.shift()).abs(), (lo - c.shift()).abs()], axis=1).max(axis=1)
-    atr = tr.rolling(14).mean().iloc[-1]
+    atr = tr.rolling(RANGE_ATR).mean().iloc[-1]
     price = float(c.iloc[-1])
     mid = c.ewm(span=RANGE_EMA, adjust=False).mean().iloc[-1]
-    buy = min(mid - RANGE_ATR_MULT * atr, price - 0.25 * atr)
-    sell = max(mid + RANGE_ATR_MULT * atr, price + 0.25 * atr)
+    buy = mid - RANGE_BUY_MULT * atr
+    sell = mid + RANGE_SELL_MULT * atr
 
     fast = c.ewm(span=TREND_FAST, adjust=False).mean()
     slow = c.ewm(span=TREND_SLOW, adjust=False).mean()
-    state = pd.Series("Neutral", index=c.index)
-    state[(c > slow) & (fast > slow)] = "Bullish"
-    state[(c < slow) & (fast < slow)] = "Bearish"
-    state = state.iloc[TREND_SLOW:]          # EMAs need time to settle
-    changed = state.ne(state.shift())
-    start = state.index[changed][-1]
-    since_start = state.index[0] == start    # no flip in the data we have
+    up = fast > slow
+    state = pd.Series("Bearish", index=c.index)
+    state[up] = "Bullish"
+    state[(up & (c < slow)) | (~up & (c > slow))] = "Neutral"   # price crossed back against the trend
+    state, trend = state.iloc[TREND_SLOW * 2:], up.iloc[TREND_SLOW * 2:]   # EMAs need time to settle
+    # A trend signal dates from the crossover; a neutral one from when it turned neutral.
+    run = state if state.iloc[-1] == "Neutral" else trend
+    start = run.index[run.ne(run.shift())][-1]
+    since_start = run.index[0] == start      # no flip in the data we have
     sig_price = float(c.loc[start])
     return {"sym": sym.replace("-", "."), "name": name, "price": price, "buy": buy, "sell": sell,
             "upside": (sell / price - 1) * 100, "downside": (buy / price - 1) * 100,
-            "signal": state.iloc[-1], "rising": price > slow.iloc[-1],
+            "signal": state.iloc[-1], "rising": not bool(up.iloc[-1]),
             "sig_date": start, "sig_old": since_start, "sig_price": sig_price,
             "sig_perf": (price / sig_price - 1) * 100,
-            "days": (c.index[-1] - start).days, "date": c.index[-1]}
+            "days": (c.index[-1] - start).days, "date": c.index[-1],
+            # sessions missing from the last two weeks (Yahoo sometimes drops bars)
+            "gaps": max(0, len(pd.bdate_range(c.index[-1] - pd.Timedelta(days=13), c.index[-1]))
+                        - 1 - int((c.index > c.index[-1] - pd.Timedelta(days=13)).sum()))}
 
 
 def analyze_trends():
@@ -522,7 +530,10 @@ def analyze_trends():
 
     def one(item):
         try:
-            return trend_row(item[0], item[1], yahoo_daily(item[0], "2y"))
+            df = yahoo_daily(item[0], "2y")
+            recent = yahoo_daily(item[0], "1mo")   # long ranges sometimes miss the latest bars
+            df = recent.combine_first(df)
+            return trend_row(item[0], item[1], df)
         except Exception as e:
             print(f"  trend {item[0]} failed: {e}")
             return None
@@ -737,6 +748,8 @@ def trend_table(tr):
             perf_cls = "pg" if r["sig_perf"] > 0 else "pb"
             read = range_read(r)
             rcls = "mid" if read == "Mid-range" else state_key(r)
+            if r["gaps"] >= 2:
+                read, rcls = f"⚠ {r['gaps']} recent sessions missing from Yahoo; levels less reliable", "mid"
             date = ("before " if r["sig_old"] else "") + f"{r['sig_date']:%-m/%-d/%Y}"
             body.append(
                 f'<tr><td class="sym">{r["sym"]}</td><td class="nm">{r["name"]}</td>'
@@ -983,11 +996,12 @@ Calm = swing size below the {HY_CALM_PCTILE}th percentile with little widening.
 <b>Strongest 90% signal:</b> a 90% up day within about 10 sessions of a 90% down day (Lowry's research).
 <b>Dollar:</b> ICE US Dollar Index. Reversing = made a 60-day high in the last 20 sessions, now {DXY_REVERSAL_PCT}%+ below it and under its 20-day average.
 <b>Yield curve:</b> 10-year minus 2-year Treasury yield from FRED (one business day behind). Flattening/steepening = {CURVE_MOVE_BPS}+ bps move in 20 days; rates stable = 10-year moved less than {RATES_STABLE_BPS} bps in 20 days.
-<b>Trend ranges:</b> buy level = {RANGE_EMA}-day average minus {RANGE_ATR_MULT}× the average daily range (14-day ATR), sell level = plus the same;
-if the price is already outside that band the level sits just beyond it. Upside/downside = distance from today's price to the sell/buy level.
-Bullish = price above its {TREND_SLOW}-day average and the {TREND_FAST}-day above the {TREND_SLOW}-day; bearish = both below; neutral = mixed
-(↑ when the price is back above the {TREND_SLOW}-day, yellow; ↓ otherwise, orange).
-Read = near buy/sell when the price is within {RANGE_NEAR:.0%} of the range from that end. Signal date/price = the close when the current signal began; days are calendar days.
+<b>Trend ranges:</b> buy level = {RANGE_EMA}-day exponential average minus {RANGE_BUY_MULT}× the {RANGE_ATR}-day average daily range (ATR);
+sell level = the same average plus {RANGE_SELL_MULT}× that range. Upside/downside = distance from today's price to the sell/buy level.
+Bullish/bearish = the {TREND_FAST}-day exponential average above/below the {TREND_SLOW}-day; neutral = the price has crossed back over the
+{TREND_SLOW}-day against the trend (↑ in a downtrend, yellow; ↓ in an uptrend, orange). These formulas were fitted to a published buy/sell-level
+sheet for Nov 24, 2026: most levels within about 1%, trend direction on 40 of 41 symbols. Signal date/price = the close when the current signal began; days are calendar days.
+Read = near buy/sell when the price is within {RANGE_NEAR:.0%} of the range from that end.
 In the VIX and spread tables, red means rising (more stress) and green means falling.
 Not investment advice.
 </p>
